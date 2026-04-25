@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CPRDetector, type CPRFeedback, type CompressionData } from '@/lib/cpr/detector';
 import { Metronome } from '@/lib/cpr/metronome';
@@ -10,7 +10,15 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Heart, Volume2, VolumeX, Play, Pause } from 'lucide-react';
 
-export default function CPRCoachPage() {
+export default function CPRCoachPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white">Loading CPR Coach...</div>}>
+      <CPRCoachPage />
+    </Suspense>
+  );
+}
+
+function CPRCoachPage() {
   const searchParams = useSearchParams();
   // emergencyId can be used for logging/tracking
   const emergencyId = searchParams?.get('emergency_id');

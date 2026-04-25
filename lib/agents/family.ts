@@ -1,5 +1,9 @@
-import { supabaseServer } from '../supabase/server';
+import { supabaseServer as _supabaseServer } from '../supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+
+// Cast to any — Supabase Database type has no table definitions;
+// this file is legacy (not on demo critical path) and will be migrated later.
+const supabaseServer = _supabaseServer as any;
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,

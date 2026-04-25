@@ -3,9 +3,10 @@
 
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { UCLA_AEDS_MOCK, type UclaAed } from '@/lib/uclaAedsMock';
+import 'leaflet/dist/leaflet.css';
 
 // ─── Haversine ────────────────────────────────────────────────
 const R_EARTH = 6371000; // metres
@@ -59,7 +60,6 @@ function AedMapInner({
     Promise.all([
       import('leaflet'),
       import('react-leaflet'),
-      import('leaflet/dist/leaflet.css'),
     ]).then(([leaflet, rl]) => {
       setL(leaflet.default);
       setReactLeaflet(rl);
@@ -173,9 +173,6 @@ function AedMapInner({
     </MapContainer>
   );
 }
-
-// Need useState for the dynamic import approach
-import { useState } from 'react';
 
 // ─── Component ────────────────────────────────────────────────
 export function NearbyAedMap({
