@@ -530,7 +530,7 @@ export function useSerialCPR() {
     [addLog, syncPatientProfile]
   );
 
-  const connect = useCallback(async (): Promise<boolean> => {
+  const connect = useCallback(async (opts: { silent?: boolean } = {}): Promise<boolean> => {
     if (connectPromiseRef.current) {
       addLog('info', 'Connect already in progress; reusing existing attempt');
       return connectPromiseRef.current;
@@ -539,25 +539,31 @@ export function useSerialCPR() {
     const connectTask = (async () => {
       if (typeof navigator === 'undefined' || !('serial' in navigator) || !navigator.serial) {
         const message = 'Web Serial is not supported in this browser. Use Chrome or Edge over HTTPS or localhost.';
-        setSerialState((prev) => ({
-          ...prev,
-          isSupported: false,
-          isConnecting: false,
-          error: message,
-        }));
-        addLog('error', 'Cannot connect to Arduino', message);
+        if (!opts.silent) {
+          setSerialState((prev) => ({
+            ...prev,
+            isSupported: false,
+            isConnecting: false,
+            error: message,
+          }));
+          addLog('error', 'Cannot connect to Arduino', message);
+        }
         return false;
       }
 
+      // Skip the loud "connecting" UI swap when we're trying a silent
+      // auto-connect — we don't want the page to flash a CONNECTING state
+      // every time a known device hasn't actually been plugged in yet.
       setSerialState((prev) => ({
         ...prev,
         isSupported: true,
-        isConnecting: true,
+        isConnecting: !opts.silent,
         error: null,
       }));
 
       try {
         if (portRef.current || readerRef.current || portIsOpenRef.current) {
+          if (opts.silent) return false; // already connected — silent re-attempt is a no-op
           addLog('info', 'Existing serial state found; resetting before reconnect');
           await disconnect();
         }
@@ -565,9 +571,21 @@ export function useSerialCPR() {
         const knownPorts = await navigator.serial.getPorts();
         addLog('info', 'Checking previously approved serial ports', `found=${knownPorts.length}`);
 
-        const port = await navigator.serial.requestPort();
+        let port: SerialPort;
+        if (opts.silent) {
+          // Silent path: use a previously-granted port if one is plugged in;
+          // never raise the browser permission dialog.
+          if (knownPorts.length === 0) {
+            addLog('info', 'Silent connect skipped', 'No previously-granted ports available');
+            setSerialState((prev) => ({ ...prev, isConnecting: false }));
+            return false;
+          }
+          port = knownPorts[0];
+        } else {
+          port = await navigator.serial.requestPort();
+        }
         portRef.current = port;
-        addLog('info', 'Serial port selected', describePort(port));
+        addLog('info', opts.silent ? 'Reusing previously-granted serial port' : 'Serial port selected', describePort(port));
 
         try {
           await port.open({ baudRate: 115200 });
@@ -610,7 +628,11 @@ export function useSerialCPR() {
         return true;
       } catch (error) {
         const message = formatError(error, 'Failed to connect to Arduino serial port.');
-        addLog('error', 'Arduino connection failed', message);
+        if (!opts.silent) {
+          addLog('error', 'Arduino connection failed', message);
+        } else {
+          addLog('info', 'Silent connect failed', message);
+        }
 
         keepReadingRef.current = false;
         await cleanupReader();
@@ -631,7 +653,7 @@ export function useSerialCPR() {
           isConnected: false,
           isConnecting: false,
           isReceiving: false,
-          error: message,
+          error: opts.silent ? prev.error : message,
         }));
         return false;
       } finally {
@@ -642,6 +664,37 @@ export function useSerialCPR() {
     connectPromiseRef.current = connectTask;
     return connectTask;
   }, [addLog, cleanupReader, disconnect, requestPatientProfile, startReadLoop]);
+
+  // Auto-detect already-granted devices on mount + react to plug/unplug.
+  // - On mount: try a silent connect. If the user previously authorized this
+  //   Arduino in this browser profile and it's currently plugged in, we
+  //   reconnect without showing the browser permission dialog again.
+  // - On 'connect': fired when an already-granted USB device gets plugged in
+  //   while the page is open → silent reconnect.
+  // - On 'disconnect': fired when our open port is unplugged → tear down state.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serial' in navigator) || !navigator.serial) return;
+
+    void connect({ silent: true });
+
+    const onConnect = () => {
+      if (portRef.current) return; // already attached to something
+      void connect({ silent: true });
+    };
+    const onDisconnect = (event: Event) => {
+      const e = event as Event & { target?: SerialPort };
+      const target = e.target;
+      if (target && portRef.current && target !== portRef.current) return;
+      void disconnect();
+    };
+
+    navigator.serial.addEventListener('connect', onConnect);
+    navigator.serial.addEventListener('disconnect', onDisconnect);
+    return () => {
+      navigator.serial.removeEventListener('connect', onConnect);
+      navigator.serial.removeEventListener('disconnect', onDisconnect);
+    };
+  }, [connect, disconnect]);
 
   useEffect(() => {
     return () => {

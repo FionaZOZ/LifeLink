@@ -139,18 +139,18 @@ function PatchBanner({ cpr, connected }: { cpr: Cpr; connected: boolean }) {
   React.useEffect(() => { setMounted(true); }, []);
 
   const label = !mounted
-    ? 'PATCH OFFLINE · PLUG IN'
+    ? 'PATCH OFFLINE · PLUG IN TO CONNECT'
     : !cpr.isSupported ? 'WEB SERIAL UNSUPPORTED'
       : cpr.isConnecting ? 'PATCH CONNECTING…'
       : connected ? `PATCH CONNECTED · 50 Hz · ${cpr.sampleCount} samples`
       : cpr.isConnected ? 'PATCH WAITING FOR DATA'
-      : 'PATCH OFFLINE · PLUG IN';
+      : 'PATCH OFFLINE · PLUG IN TO CONNECT';
   const disabled = mounted ? (cpr.isConnecting || !cpr.isSupported) : false;
   const cursor = !mounted ? 'pointer' : cpr.isSupported ? 'pointer' : 'default';
 
   return (
     <button
-      onClick={connected ? cpr.disconnect : cpr.connect}
+      onClick={() => { void (connected ? cpr.disconnect() : cpr.connect()); }}
       disabled={disabled}
       style={{
         all: 'unset', cursor,
