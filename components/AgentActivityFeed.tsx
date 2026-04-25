@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { AgentEvent } from '@/lib/useBusTelemetry';
+import type { AgentEvent } from '@/lib/useEmergencyTelemetry';
 
 const AGENT_COLORS: Record<string, string> = {
   Coordinator: 'text-blue-400',

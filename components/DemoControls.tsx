@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { ScenarioState } from '@/lib/useBusTelemetry';
-import { SCENARIOS } from '@/lib/useBusTelemetry';
+import type { ScenarioState } from '@/lib/useEmergencyTelemetry';
+import { SCENARIOS } from '@/lib/useEmergencyTelemetry';
 
 interface LayerToggles {
   aeds: boolean;

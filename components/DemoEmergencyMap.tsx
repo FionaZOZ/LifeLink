@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { Map, NavigationControl, Marker, Source, Layer } from 'react-map-gl/mapbox';
 import type { CircleLayer, FillLayer, LineLayer, FillExtrusionLayer } from 'mapbox-gl';
 import type { LayerToggles } from './DemoControls';
-import type { ScenarioState } from '@/lib/useBusTelemetry';
+import type { ScenarioState } from '@/lib/useEmergencyTelemetry';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { point, featureCollection } from '@turf/helpers';
 import turfCircle from '@turf/circle';

@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useBusTelemetry } from '@/lib/useBusTelemetry';
+import { useEmergencyTelemetry } from '@/lib/useEmergencyTelemetry';
 import { DemoEmergencyMap } from '@/components/DemoEmergencyMap';
 import { AgentActivityFeed } from '@/components/AgentActivityFeed';
 import { DemoControls, type LayerToggles } from '@/components/DemoControls';
 import Link from 'next/link';
 
 export default function DemoPage() {
-  const { state, runScenario, reset, scenarios } = useBusTelemetry();
+  const { state, runScenario, reset, scenarios } = useEmergencyTelemetry({ mode: 'playback' });
 
   const [layers, setLayers] = useState<LayerToggles>({
     aeds: true,
