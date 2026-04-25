@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { getMergedAeds } from './data/aedRegistry';
 import stemiData from './data/stemi-hospitals.json';
 import lafdData from './data/lafd-stations.json';
+import { buildHandoffBundle } from './fhir/buildBundle';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,12 @@ export interface HospitalInfo {
   eta_minutes?: number;
 }
 
+export interface PersistenceState {
+  status: 'idle' | 'persisting' | 'persisted' | 'failed' | 'unavailable';
+  recordId: string | null;
+  error?: string;
+}
+
 export interface ScenarioState {
   phase: 'idle' | 'call_received' | 'agents_dispatching' | 'aeds_located' | 'ems_en_route' | 'drone_launched' | 'triage_complete' | 'handoff_ready' | 'resolved';
   emergencyLocation: { lat: number; lon: number } | null;
@@ -69,6 +76,7 @@ export interface ScenarioState {
   events: AgentEvent[];
   triageLevel: string | null;
   elapsed: number; // seconds since scenario start (can be fractional)
+  persistence: PersistenceState;
 }
 
 // ── Hook options ──────────────────────────────────────────────────────────
@@ -176,6 +184,7 @@ const INITIAL_STATE: ScenarioState = {
   events: [],
   triageLevel: null,
   elapsed: 0,
+  persistence: { status: 'idle', recordId: null },
 };
 
 export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}) {
@@ -454,11 +463,53 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
         addEvent('Handoff', 'response', `${nearestHospital.ecmo_capable ? 'ECMO-capable' : 'Standard'} cath lab, ETA ${nearestHospital.eta_minutes} min by ambulance`);
       },
 
-      // Phase 10 (t=8) — Resolved
+      // Phase 10 (t=8) — Resolved + persist FHIR bundle to MongoDB
       () => {
         setState(prev => ({ ...prev, phase: 'resolved', elapsed: elapsedRef.current }));
         addEvent('Coordinator', 'response', 'Emergency response coordinated. All agents standing by.');
         addEvent('Coordinator', 'response', `Time to AED: ~2 min (drone). EMS ETA: ${emsEtaMinutes} min (${nearestStation.name}). Hospital: ${nearestHospital.name}`);
+
+        // Fire-and-forget FHIR bundle persistence to MongoDB Atlas
+        setState(prev => {
+          const bundle = buildHandoffBundle(prev, scenario.name);
+          // Set persisting status immediately
+          const next = { ...prev, persistence: { status: 'persisting' as const, recordId: null } };
+
+          fetch('/api/handoff', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              bundle,
+              scenario: scenario.name,
+              receivingHospital: nearestHospital.name,
+            }),
+          })
+            .then(r => r.json())
+            .then(data => {
+              if (data.stored) {
+                setState(p => ({
+                  ...p,
+                  persistence: { status: 'persisted', recordId: data.id },
+                }));
+                addEvent('Persistence', 'response', `FHIR R4 bundle persisted to MongoDB Atlas — record ${data.id}`);
+              } else {
+                setState(p => ({
+                  ...p,
+                  persistence: { status: 'unavailable', recordId: null, error: data.reason },
+                }));
+                addEvent('Persistence', 'response', `MongoDB not configured — bundle not persisted (${data.reason})`);
+              }
+            })
+            .catch(err => {
+              setState(p => ({
+                ...p,
+                persistence: { status: 'failed', recordId: null, error: String(err) },
+                }));
+              addEvent('Persistence', 'error', `Failed to persist FHIR bundle: ${err}`);
+            });
+
+          return next;
+        });
       },
     ];
 
