@@ -3,18 +3,24 @@ import * as React from 'react';
 import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { CPRToolbar, CPRMiniLive } from '@/components/lifelink/CPRShared';
+import { PatientProfileSheet } from '@/components/lifelink/PatientProfileSheet';
+import { ReassessPrompt } from '@/components/lifelink/ReassessPrompt';
 import { X, FONT } from '@/components/lifelink/tokens';
-import { useSerialCPR } from '@/lib/cpr/useSerialCPR';
+import { useSerialCPR, type SerialPatientProfile } from '@/lib/cpr/useSerialCPR';
 
 // ── shared constants ──────────────────────────────────────────────────────
 const TARGET_BPM = 110;
-const ROLLING_WINDOW_MS = 6000;
-const IDLE_THRESHOLD_MS = 2500;
+const COMPRESSIONS_PER_CYCLE = 30;
+const COMPRESSION_PHASE_MS = Math.round((COMPRESSIONS_PER_CYCLE * 60_000) / TARGET_BPM); // ≈ 16364
+const BREATH_PHASE_MS = 5000; // 2 breaths × ~2.5s
+const BREATHS_PER_CYCLE = 2;
+const CYCLE_MS = COMPRESSION_PHASE_MS + BREATH_PHASE_MS;
+
 const DEPTH_MIN = 0, DEPTH_MAX = 7;
 const IDEAL_LO = 5.0, IDEAL_HI = 6.0;
 const pct = (v: number) => ((v - DEPTH_MIN) / (DEPTH_MAX - DEPTH_MIN)) * 100;
 
-// Map sensor voltage (0–5V on RP-S40-ST) to a believable compression depth (0–7cm).
+// Map sensor voltage (0–5V on RP-S40-ST) to compression depth (0–7cm).
 function voltageToDepth(v: number) {
   return Math.max(0, Math.min(DEPTH_MAX, v * 1.4));
 }
@@ -26,7 +32,7 @@ function fmtMmSs(seconds: number) {
 }
 
 // ── voice cue lists ───────────────────────────────────────────────────────
-const PHONE_CUES_OK = [
+const PUSH_CUES = [
   '"Push hard. Push fast."',
   '"Center of the chest."',
   '"Twice per second."',
@@ -34,19 +40,10 @@ const PHONE_CUES_OK = [
   '"Don\'t stop pushing."',
   '"Stay strong — keep the rhythm."',
 ];
-const PHONE_CUES_FAST = [
-  '"Slow down — about twice per second."',
-  '"Ease the rate down."',
-];
-const PHONE_CUES_SLOW = [
-  '"Push faster."',
-  '"Pick up the pace — match the beat."',
-  '"Compressions need to be quicker."',
-];
-const PHONE_CUES_IDLE = [
-  '"Tap each time you push."',
-  '"Push along with the beat."',
-  '"Match every pulse."',
+const BREATH_CUES = [
+  '"Tilt the head back. Pinch the nose."',
+  '"Two slow breaths — watch the chest rise."',
+  '"Seal your mouth over theirs. Blow gently."',
 ];
 const HW_CUES_OK = [
   '"Good depth. Keep going."',
@@ -54,6 +51,41 @@ const HW_CUES_OK = [
   '"You\'re right in the band."',
   '"Strong compressions — don\'t stop."',
 ];
+
+// ── 30:2 phase derivation ─────────────────────────────────────────────────
+type PhaseInfo = {
+  cyclesCompleted: number;
+  phase: 'PUSH' | 'BREATHE';
+  phaseProgress: number;          // 0..1
+  compressionInCycle: number;      // 1..30 during PUSH, =30 during BREATHE
+  breathInCycle: number;           // 0 during PUSH, 1..2 during BREATHE
+  totalCompressions: number;       // cumulative
+};
+
+function derivePhase(elapsedMs: number): PhaseInfo {
+  if (elapsedMs <= 0) {
+    return { cyclesCompleted: 0, phase: 'PUSH', phaseProgress: 0, compressionInCycle: 1, breathInCycle: 0, totalCompressions: 0 };
+  }
+  const cyclesCompleted = Math.floor(elapsedMs / CYCLE_MS);
+  const inCycle = elapsedMs % CYCLE_MS;
+  if (inCycle < COMPRESSION_PHASE_MS) {
+    const progress = inCycle / COMPRESSION_PHASE_MS;
+    const compressionInCycle = Math.min(COMPRESSIONS_PER_CYCLE, Math.floor(progress * COMPRESSIONS_PER_CYCLE) + 1);
+    return {
+      cyclesCompleted, phase: 'PUSH', phaseProgress: progress,
+      compressionInCycle, breathInCycle: 0,
+      totalCompressions: cyclesCompleted * COMPRESSIONS_PER_CYCLE + compressionInCycle - 1,
+    };
+  }
+  const breathElapsed = inCycle - COMPRESSION_PHASE_MS;
+  const progress = breathElapsed / BREATH_PHASE_MS;
+  const breathInCycle = Math.min(BREATHS_PER_CYCLE, Math.floor(progress * BREATHS_PER_CYCLE) + 1);
+  return {
+    cyclesCompleted, phase: 'BREATHE', phaseProgress: progress,
+    compressionInCycle: COMPRESSIONS_PER_CYCLE, breathInCycle,
+    totalCompressions: cyclesCompleted * COMPRESSIONS_PER_CYCLE + COMPRESSIONS_PER_CYCLE,
+  };
+}
 
 // ── PATCH BANNER (shared between both layouts) ────────────────────────────
 type Cpr = ReturnType<typeof useSerialCPR>;
@@ -78,14 +110,38 @@ function PatchBanner({ cpr, connected }: { cpr: Cpr; connected: boolean }) {
           : cpr.isConnecting ? 'PATCH CONNECTING…'
           : connected ? 'PATCH CONNECTED'
           : cpr.isConnected ? 'PATCH WAITING FOR DATA'
-          : 'PATCH OFFLINE — TAP TO PAIR'}
+          : 'PATCH OFFLINE — PLUG IN TO CONNECT'}
       </span>
       <span style={{ flex: 1 }}/>
       <span style={{ fontSize: 9, fontFamily: FONT.mono, color: connected ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)' }}>
-        {connected ? `50 Hz · samples ${cpr.sampleCount}` : 'pair to unlock depth bar'}
+        {connected ? `50 Hz · samples ${cpr.sampleCount}` : 'plug in to unlock depth bar'}
       </span>
     </button>
   );
+}
+
+// ── PATIENT PROFILE SHEET HOOK ─────────────────────────────────────────────
+// Detects the patch's profile transitioning from null → object and pops the
+// sheet exactly once per profile fingerprint (so re-pairing the same Arduino
+// during the same session doesn't re-pop it).
+function usePatchProfileSheet(profile: SerialPatientProfile | null): { open: boolean; dismiss: () => void } {
+  const [open, setOpen] = React.useState(false);
+  const ackedFingerprintRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (!profile) return;
+    const fingerprint = JSON.stringify(profile);
+    if (ackedFingerprintRef.current !== fingerprint) {
+      setOpen(true);
+    }
+  }, [profile]);
+
+  const dismiss = React.useCallback(() => {
+    if (profile) ackedFingerprintRef.current = JSON.stringify(profile);
+    setOpen(false);
+  }, [profile]);
+
+  return { open, dismiss };
 }
 
 // ── PAGE: auto-switches between phone-only and hardware-connected layouts ─
@@ -101,109 +157,119 @@ export default function CPRAssistPage() {
     const id = setInterval(() => forceTick(v => v + 1), 250);
     return () => clearInterval(id);
   }, []);
-  const now = Date.now();
-  const elapsedMs = startRef.current ? now - startRef.current : 0;
+  const elapsedMs = startRef.current ? Date.now() - startRef.current : 0;
 
-  return connected
-    ? <HardwareLayout cpr={cpr} elapsedMs={elapsedMs}/>
-    : <PhoneOnlyLayout cpr={cpr} elapsedMs={elapsedMs} now={now}/>;
+  // Patient profile sheet — only relevant when hardware is connected.
+  const sheet = usePatchProfileSheet(cpr.patientProfile);
+
+  return (
+    <>
+      {connected
+        ? <HardwareLayout cpr={cpr} elapsedMs={elapsedMs}/>
+        : <PhoneOnlyLayout cpr={cpr} elapsedMs={elapsedMs}/>
+      }
+      <PatientProfileSheet
+        profile={cpr.patientProfile}
+        open={sheet.open}
+        onDismiss={sheet.dismiss}
+        syncedAt={cpr.profileSyncedAt}
+        syncError={cpr.profileSyncError}
+      />
+    </>
+  );
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// LAYOUT A — phone-only (no LifeLink Patch). Tap each compression to register.
+// LAYOUT A — phone-only (no LifeLink Patch). Hands stay on chest; the screen
+// drives the bystander through the AHA 30:2 cycle: 30 compressions at 110bpm
+// (~16.4s) → 2 breaths (~5s) → repeat. Compression count auto-increments
+// based on the assumption that the user is matching the metronome.
 // ───────────────────────────────────────────────────────────────────────────
-function PhoneOnlyLayout({ cpr, elapsedMs, now }: { cpr: Cpr; elapsedMs: number; now: number }) {
-  const tapsRef = React.useRef<number[]>([]);
-  const [, forceTick] = React.useState(0);
+function PhoneOnlyLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
+  const phase = derivePhase(elapsedMs);
+  const isPush = phase.phase === 'PUSH';
+  const cycleNum = phase.cyclesCompleted + 1;
 
-  const tap = React.useCallback((e?: React.PointerEvent) => {
-    if (e) e.preventDefault();
-    tapsRef.current.push(Date.now());
-    forceTick(v => v + 1);
-  }, []);
-
-  const compressions = tapsRef.current.length;
-  const recent = tapsRef.current.filter(t => now - t <= ROLLING_WINDOW_MS);
-  const lastTapMs = recent.length ? now - recent[recent.length - 1] : Infinity;
-  const idle = compressions === 0 || lastTapMs > IDLE_THRESHOLD_MS;
-
-  let bpm: number | null = null;
-  if (recent.length >= 2) {
-    const span = (recent[recent.length - 1] - recent[0]) / 1000;
-    bpm = span > 0 ? Math.round((recent.length - 1) * 60 / span) : null;
-  }
-  const cycle = Math.max(1, Math.floor(compressions / 30) + 1);
-
-  const cueList = idle ? PHONE_CUES_IDLE
-    : bpm == null ? PHONE_CUES_OK
-    : bpm < 95 ? PHONE_CUES_SLOW
-    : bpm > 125 ? PHONE_CUES_FAST
-    : PHONE_CUES_OK;
-  const cueColor = idle ? X.AMBER : (bpm != null && (bpm < 95 || bpm > 125)) ? X.AMBER : X.RED;
+  const cueList = isPush ? PUSH_CUES : BREATH_CUES;
+  const cueColor = isPush ? X.RED : X.BLUE;
   const cueIdx = Math.floor(elapsedMs / 4500) % cueList.length;
   const cue = cueList[cueIdx];
 
-  const rateColor = idle ? 'rgba(255,255,255,0.55)' : bpm == null ? 'rgba(255,255,255,0.85)' : (bpm >= 100 && bpm <= 120) ? X.GREEN : X.AMBER;
-  const rateText = bpm == null ? '—' : String(bpm);
+  // Outer phase ring: an SVG circle that fills as the current phase progresses.
+  const ringR = 100;
+  const ringC = 2 * Math.PI * ringR;
 
   return (
     <Screen bg={X.DARK} padTop={0}>
       <EmergencyBanner/>
+      <ReassessPrompt cyclesCompleted={phase.cyclesCompleted}/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
         <PatchBanner cpr={cpr} connected={false}/>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>● CPR · CYCLE {String(cycle).padStart(2, '0')}</div>
+          <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>
+            ● CPR · CYCLE {String(cycleNum).padStart(2, '0')}
+          </div>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>{fmtMmSs(Math.floor(elapsedMs / 1000))}</div>
         </div>
         <CPRToolbar metroOn voiceOn helpersInCall={2}/>
 
-        {/* Big tappable beat circle — metronome via CSS keyframe at 110 bpm,
-            tap to record actual compressions. */}
-        <div
-          onPointerDown={tap}
-          role="button"
-          aria-label="Tap on every compression"
-          style={{ marginTop: 12, position: 'relative', height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', touchAction: 'none', userSelect: 'none' }}
-        >
-          <div style={{ position: 'absolute', width: 190, height: 190, borderRadius: 95, border: '1px solid rgba(255,255,255,0.15)' }}/>
-          <div style={{ position: 'absolute', width: 230, height: 230, borderRadius: 115, border: '1px solid rgba(255,255,255,0.08)' }}/>
+        {/* Big circle with phase ring overlay */}
+        <div style={{ marginTop: 14, position: 'relative', height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* progress ring (sits just outside the inner circle) */}
+          <svg width={220} height={220} viewBox="0 0 220 220" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
+            <circle cx="110" cy="110" r={ringR} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3"/>
+            <circle
+              cx="110" cy="110" r={ringR} fill="none"
+              stroke={isPush ? X.RED : X.BLUE} strokeWidth="3" strokeLinecap="round"
+              strokeDasharray={ringC}
+              strokeDashoffset={ringC * (1 - phase.phaseProgress)}
+              style={{ transition: 'stroke-dashoffset 240ms linear, stroke 220ms ease-out' }}
+            />
+          </svg>
+
+          {/* inner pulsing circle — fast for PUSH, slow for BREATHE */}
           <div style={{
-            width: 158, height: 158, borderRadius: 79, background: X.RED,
+            width: 168, height: 168, borderRadius: 84,
+            background: isPush ? X.RED : X.BLUE,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            animation: 'll-cpr-beat 0.545s ease-in-out infinite',
-            boxShadow: '0 0 80px rgba(225,29,46,0.5)',
+            animation: isPush ? 'll-cpr-beat 0.545s ease-in-out infinite' : 'll-breathe 2.5s ease-in-out infinite',
+            boxShadow: isPush ? '0 0 80px rgba(225,29,46,0.5)' : '0 0 80px rgba(44,102,232,0.4)',
+            transition: 'background 220ms ease-out, box-shadow 220ms ease-out',
           }}>
-            <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.9 }}>TAP HERE</div>
-            <div style={{ fontSize: 56, fontWeight: 700, fontFamily: FONT.display, lineHeight: 1 }}>{TARGET_BPM}</div>
-            <div style={{ fontSize: 10, opacity: 0.85, marginTop: 2 }}>BPM target</div>
+            <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.95 }}>
+              {isPush ? 'PUSH' : 'BREATHE'}
+            </div>
+            <div style={{ fontSize: 50, fontWeight: 700, fontFamily: FONT.display, lineHeight: 1, marginTop: 2 }}>
+              {isPush ? `${phase.compressionInCycle}/${COMPRESSIONS_PER_CYCLE}` : `${phase.breathInCycle}/${BREATHS_PER_CYCLE}`}
+            </div>
+            <div style={{ fontSize: 10, opacity: 0.85, marginTop: 4 }}>
+              {isPush ? `${TARGET_BPM} BPM` : 'tilt head · pinch nose'}
+            </div>
           </div>
         </div>
 
-        <div style={{ marginTop: 4, display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'center' }}>
-          {Array.from({ length: 14 }).map((_, i) => (
-            <div key={i} style={{ width: 5, height: i === 6 ? 22 : 10, background: i === 6 ? X.RED : 'rgba(255,255,255,0.15)' }}/>
-          ))}
-        </div>
-
-        <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        {/* Stats row */}
+        <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <div>
             <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>COMPRESSIONS</div>
-            <div style={{ fontSize: 28, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -1 }}>{compressions}</div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>cycle {String(cycle).padStart(2, '0')}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -1 }}>{phase.totalCompressions}</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>since you started</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>CYCLES</div>
+            <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -1 }}>{phase.cyclesCompleted}</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>30:2 completed</div>
           </div>
           <div>
             <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>RATE</div>
-            <div style={{ fontSize: 28, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -1, color: rateColor }}>
-              {rateText} <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>BPM</span>
-            </div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>
-              {idle ? 'tap to begin' : bpm == null ? 'building rate…' : bpm < 95 ? 'too slow' : bpm > 125 ? 'too fast' : 'in target band'}
-            </div>
+            <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -1, color: X.GREEN }}>{TARGET_BPM}</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>bpm target</div>
           </div>
         </div>
 
-        <div style={{ marginTop: 10, padding: 10, borderRadius: 12, background: cueColor, color: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Voice cue */}
+        <div style={{ marginTop: 12, padding: 10, borderRadius: 12, background: cueColor, color: '#fff', display: 'flex', alignItems: 'center', gap: 10, transition: 'background 220ms ease-out' }}>
           <Icon name="volume" size={14} color="#fff" stroke={2}/>
           <div style={{ flex: 1, fontSize: 12, fontWeight: 700 }}>{cue}</div>
           <div style={{ fontSize: 9, fontFamily: FONT.mono, opacity: 0.85 }}>{fmtMmSs(Math.floor(elapsedMs / 1000))}</div>
@@ -255,6 +321,7 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
   const inBand = liveDepth >= IDEAL_LO && liveDepth <= IDEAL_HI;
   const depthColor = inBand ? X.GREEN : (liveDepth < IDEAL_LO ? X.AMBER : X.RED);
   const cycle = Math.max(1, Math.floor(liveCount / 30) + 1);
+  const cyclesCompleted = Math.floor(liveCount / 30);
 
   let cueText: string;
   let cueBg: string;
@@ -272,6 +339,7 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
   return (
     <Screen bg={X.DARK} padTop={0}>
       <EmergencyBanner/>
+      <ReassessPrompt cyclesCompleted={cyclesCompleted}/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
         <PatchBanner cpr={cpr} connected={true}/>
 
@@ -287,7 +355,6 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
             <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>COMPRESSION DEPTH</div>
             <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)', letterSpacing: 1 }}>TARGET 5.0–6.0 cm</div>
           </div>
-
           <div style={{ marginTop: 8, position: 'relative', height: 56, background: 'rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{
               position: 'absolute', top: 0, bottom: 0,
@@ -309,7 +376,6 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
               transition: 'left 80ms linear, background 120ms linear',
             }}>{liveDepth.toFixed(1)} cm</div>
           </div>
-
           <div style={{ marginTop: 4, position: 'relative', height: 14, fontFamily: FONT.mono, fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>
             {[0, 2, 4, 5, 6, 7].map(v => (
               <span key={v} style={{ position: 'absolute', left: `${pct(v)}%`, transform: 'translateX(-50%)' }}>{v}</span>
@@ -317,7 +383,6 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
           </div>
         </div>
 
-        {/* Beat circle — scales on every press detected by the patch. */}
         <div style={{ marginTop: 6, position: 'relative', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, border: '1px solid rgba(255,255,255,0.12)' }}/>
           <div style={{
@@ -333,7 +398,6 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
           </div>
         </div>
 
-        {/* Live metric grid. */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <div>
             <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>RATE</div>
