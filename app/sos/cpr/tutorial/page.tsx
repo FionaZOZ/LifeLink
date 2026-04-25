@@ -58,7 +58,7 @@ export default function CPRTutorialPage() {
 
       <div style={{ position: 'absolute', left: 22, right: 22, bottom: 22, display: 'flex', gap: 10 }}>
         <button onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', padding: '14px 18px', border: `1px solid ${X.LINE}`, color: X.INK, borderRadius: 14, fontWeight: 700, fontSize: 13 }}>Skip</button>
-        <button onClick={() => router.push('/sos/cpr/assist-hw')} style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 16, background: X.RED, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 800, letterSpacing: 0.4, boxShadow: '0 8px 24px rgba(225,29,46,0.3)' }}>I&apos;M READY · START CPR</button>
+        <button onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 16, background: X.RED, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 800, letterSpacing: 0.4, boxShadow: '0 8px 24px rgba(225,29,46,0.3)' }}>I&apos;M READY · START CPR</button>
       </div>
     </Screen>
   );

@@ -55,7 +55,7 @@ export default function PickupAEDPage() {
         </div>
 
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-          <button onClick={() => router.push('/sos/cpr/assist-hw')} style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 12, textAlign: 'center', background: X.RED, color: '#fff', borderRadius: 12, fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <button onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 12, textAlign: 'center', background: X.RED, color: '#fff', borderRadius: 12, fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Icon name="zap" size={16} color="#fff" stroke={2}/> Skip AED, go direct
           </button>
           <button style={{ all: 'unset', cursor: 'pointer', position: 'relative', width: 44, height: 44, background: X.INK, color: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

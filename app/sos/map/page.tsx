@@ -43,7 +43,7 @@ export default function NearbyLivePage() {
           <ResponderRow name="Jordan P." role="0.8 mi · CPR Tier 1" tagText="ETA 4:00" tagColor={X.INK2} muted/>
         </div>
         <div style={{ marginTop: 10 }}>
-          <button onClick={() => router.push('/sos/cpr/assist-hw')} style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, background: X.RED, color: '#fff', borderRadius: 12, textAlign: 'center', fontSize: 14, fontWeight: 700 }}>Open CPR guide →</button>
+          <button onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, background: X.RED, color: '#fff', borderRadius: 12, textAlign: 'center', fontSize: 14, fontWeight: 700 }}>Open CPR guide →</button>
         </div>
       </div>
     </Screen>
