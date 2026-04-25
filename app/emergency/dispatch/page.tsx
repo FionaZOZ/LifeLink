@@ -1,16 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Phone, MessageSquare, CheckCircle, Users } from 'lucide-react';
-import AEDCard from '@/components/AEDCard';
+// CoordinatorPanel retired in favor of OrchestrationDrawer (Phase 3 integration). File preserved for reference.
+// import { CoordinatorPanel } from '@/components/CoordinatorPanel';
+import { Call911Banner } from '@/components/Call911Banner';
+import { EmergencyStatusCards } from '@/components/EmergencyStatusCards';
+import { OrchestrationPill } from '@/components/OrchestrationPill';
+import { OrchestrationDrawer } from '@/components/OrchestrationDrawer';
+import { useEmergencyTelemetry } from '@/lib/useEmergencyTelemetry';
+import dynamic from 'next/dynamic';
+
+// Lazy-load the compact map to avoid pulling Mapbox into initial bundle
+const CompactEmergencyMap = dynamic(
+  () => import('@/components/CompactEmergencyMap').then(m => ({ default: m.CompactEmergencyMap })),
+  { ssr: false, loading: () => <div className="h-[280px] bg-zinc-900 animate-pulse rounded-lg" /> },
+);
+
+// ── Twilio polling types (preserved from original) ────────────────────────
 
 interface EmergencyStatus {
-  location: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
+  location: { lat: number; lng: number; address: string };
   notifications_sent: Array<{
     phone: string;
     method: 'call' | 'sms';
@@ -22,73 +32,73 @@ interface EmergencyStatus {
   volunteers_responded: number;
 }
 
+// ── Component ──────────────────────────────────────────────────────────────
+
 export default function DispatchStatus() {
   const router = useRouter();
-  const [status, setStatus] = useState<EmergencyStatus>({
-    location: {
-      lat: 33.6846,
-      lng: -117.8265,
-      address: '3200 California Ave, Irvine CA',
-    },
+
+  // ?mode=live switches to live SSE mode (default: playback for demo safety)
+  const [urlMode, setUrlMode] = useState<'playback' | 'live'>('playback');
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'live') setUrlMode('live');
+  }, []);
+
+  // Telemetry hook — drives status cards, map, and orchestration drawer
+  const { state } = useEmergencyTelemetry({
+    mode: urlMode,
+    scenarioId: 'royce_hall',
+    persist: true,
+  });
+
+  // Orchestration drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [unseenCount, setUnseenCount] = useState(0);
+  const lastSeenRef = useRef(0);
+
+  useEffect(() => {
+    if (!drawerOpen && state.events.length > lastSeenRef.current) {
+      setUnseenCount(state.events.length - lastSeenRef.current);
+    }
+  }, [state.events.length, drawerOpen]);
+
+  const openDrawer = () => {
+    setDrawerOpen(true);
+    setUnseenCount(0);
+    lastSeenRef.current = state.events.length;
+  };
+
+  // ── Twilio polling (preserved from original) ────────────────────────────
+
+  const [twilioStatus, setTwilioStatus] = useState<EmergencyStatus>({
+    location: { lat: 33.6846, lng: -117.8265, address: '3200 California Ave, Irvine CA' },
     notifications_sent: [
-      {
-        phone: '+19495190927',
-        method: 'call',
-        status: 'calling',
-        name: 'Volunteer A',
-        distance: '150m away',
-        eta: '2 min',
-      },
-      {
-        phone: '+19493440799',
-        method: 'sms',
-        status: 'sent',
-        name: 'Volunteer B',
-        distance: '280m away',
-        eta: '3 min',
-      },
-      {
-        phone: '+19492223333',
-        method: 'call',
-        status: 'calling',
-        name: 'Volunteer C',
-        distance: '320m away',
-        eta: '4 min',
-      },
+      { phone: '+19495190927', method: 'call', status: 'calling', name: 'Volunteer A', distance: '150m away', eta: '2 min' },
+      { phone: '+19493440799', method: 'sms', status: 'sent', name: 'Volunteer B', distance: '280m away', eta: '3 min' },
+      { phone: '+19492223333', method: 'call', status: 'calling', name: 'Volunteer C', distance: '320m away', eta: '4 min' },
     ],
     volunteers_responded: 0,
   });
 
   useEffect(() => {
-    // Poll backend for status updates
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch('http://localhost:8000/api/emergency/status');
         if (response.ok) {
           const data = await response.json();
-          // Merge with hardcoded demo data
-          setStatus((prev) => ({
-            ...prev,
-            ...data,
-          }));
+          setTwilioStatus(prev => ({ ...prev, ...data }));
         }
       } catch {
-        console.log('Backend not available, using demo data');
+        // Backend not available — use demo data
       }
     }, 3000);
 
-    // Simulate volunteer responses for demo
     const simulateResponses = setTimeout(() => {
-      setStatus((prev) => ({
+      setTwilioStatus(prev => ({
         ...prev,
-        notifications_sent: prev.notifications_sent.map((notif, idx) => {
-          if (idx === 0) {
-            return { ...notif, status: 'accepted' as const };
-          } else if (idx === 1) {
-            return { ...notif, status: 'accepted' as const };
-          }
-          return notif;
-        }),
+        notifications_sent: prev.notifications_sent.map((notif, idx) =>
+          idx < 2 ? { ...notif, status: 'accepted' as const } : notif
+        ),
         volunteers_responded: 2,
       }));
     }, 4000);
@@ -99,114 +109,86 @@ export default function DispatchStatus() {
     };
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'accepted':
-        return 'text-success';
-      case 'calling':
-      case 'sent':
-        return 'text-amber-500';
-      case 'declined':
-      case 'no_answer':
-        return 'text-red-500';
-      default:
-        return 'text-gray-500';
-    }
-  };
+  // ── Auto-advance to CPR after drone_launched + 10s ──────────────────────
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'accepted':
-        return 'Accepted ✓';
-      case 'calling':
-        return 'Calling...';
-      case 'sent':
-        return 'SMS Sent';
-      case 'declined':
-        return 'Declined';
-      case 'no_answer':
-        return 'No Answer';
-      default:
-        return status;
+  const dispatchStartRef = useRef(Date.now());
+  const [autoAdvanceReady, setAutoAdvanceReady] = useState(false);
+
+  useEffect(() => {
+    if (state.phase === 'drone_launched' || state.phase === 'triage_complete' || state.phase === 'handoff_ready' || state.phase === 'resolved') {
+      const elapsed = (Date.now() - dispatchStartRef.current) / 1000;
+      if (elapsed >= 10) {
+        setAutoAdvanceReady(true);
+      } else {
+        const remaining = (10 - elapsed) * 1000;
+        const timer = setTimeout(() => setAutoAdvanceReady(true), remaining);
+        return () => clearTimeout(timer);
+      }
     }
-  };
+  }, [state.phase]);
+
+  useEffect(() => {
+    if (autoAdvanceReady) {
+      router.push('/emergency/cpr');
+    }
+  }, [autoAdvanceReady, router]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+      {/* 911 Banner */}
+      <Call911Banner />
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-900">Help is Coming</h1>
-          <p className="text-sm text-gray-600 mt-1">Emergency response in progress</p>
+      <header className="px-4 py-4 border-b border-zinc-800">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-xl font-bold">Dispatching response &mdash; agents en route</h1>
+          <p className="text-xs text-zinc-500 mt-1">
+            {new Date().toLocaleTimeString('en-US', { hour12: false })} &middot; Powered by Fetch.ai uAgents
+          </p>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {/* Card 1: 911 Status */}
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-success">
-          <div className="flex items-start gap-4">
-            <div className="text-4xl">🚑</div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">911 Notified</h3>
-              <p className="text-gray-600 mb-2">Emergency data sent to dispatch</p>
-              <div className="flex items-center gap-2 text-success">
-                <CheckCircle className="h-5 w-5" />
-                <span className="text-sm font-medium">
-                  Confirmed at {new Date().toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 space-y-4 pb-20">
+        {/* Status Cards */}
+        <EmergencyStatusCards
+          state={state}
+          visibleCards={['911', 'ems', 'drone', 'volunteers']}
+          layout="grid"
+        />
 
-        {/* Card 2: Volunteers */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Users className="h-6 w-6 text-gray-700" />
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900">Volunteers</h3>
-            </div>
-            <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
-              {status.volunteers_responded}/{status.notifications_sent.length} responding
+        {/* Compact Map */}
+        <CompactEmergencyMap state={state} height={280} />
+
+        {/* Volunteer Twilio Status (preserved) */}
+        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Volunteer Alerts</span>
+            <span className="text-[10px] font-mono text-zinc-600">
+              {twilioStatus.volunteers_responded}/{twilioStatus.notifications_sent.length} responding
             </span>
           </div>
-
-          {/* Volunteer List */}
-          <div className="space-y-4">
-            {status.notifications_sent.map((volunteer, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg"
-              >
-                {/* Method Icon */}
-                <div className="flex-shrink-0">
-                  {volunteer.method === 'call' ? (
-                    <Phone className="h-5 w-5 text-blue-600" />
-                  ) : (
-                    <MessageSquare className="h-5 w-5 text-green-600" />
-                  )}
+          <div className="space-y-2">
+            {twilioStatus.notifications_sent.map((v, idx) => (
+              <div key={idx} className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 rounded-lg">
+                <span className="text-sm">{v.method === 'call' ? '\uD83D\uDCDE' : '\uD83D\uDCAC'}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-zinc-200">{v.name}</div>
+                  <div className="text-[10px] text-zinc-500">{v.distance}</div>
                 </div>
-
-                {/* Info */}
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">{volunteer.name}</div>
-                  <div className="text-sm text-gray-600">{volunteer.distance}</div>
-                </div>
-
-                {/* Status */}
                 <div className="text-right">
-                  <div className={`font-medium ${getStatusColor(volunteer.status)}`}>
-                    {getStatusText(volunteer.status)}
+                  <div className={`text-xs font-semibold ${
+                    v.status === 'accepted' ? 'text-green-400' :
+                    v.status === 'calling' || v.status === 'sent' ? 'text-amber-400' :
+                    'text-red-400'
+                  }`}>
+                    {v.status === 'accepted' ? 'Accepted \u2713' :
+                     v.status === 'calling' ? 'Calling...' :
+                     v.status === 'sent' ? 'SMS Sent' :
+                     v.status}
                   </div>
-                  {volunteer.status === 'accepted' && volunteer.eta && (
-                    <div className="text-sm text-gray-600">ETA: {volunteer.eta}</div>
-                  )}
-                  {volunteer.status === 'calling' && (
-                    <div className="flex items-center gap-1 text-amber-600">
-                      <span className="animate-pulse inline-block w-2 h-2 bg-amber-600 rounded-full"></span>
-                      <span className="text-xs">Ringing</span>
-                    </div>
+                  {v.status === 'accepted' && v.eta && (
+                    <div className="text-[10px] text-zinc-500">ETA: {v.eta}</div>
                   )}
                 </div>
               </div>
@@ -214,17 +196,27 @@ export default function DispatchStatus() {
           </div>
         </div>
 
-        {/* Card 3: AED Located */}
-        <AEDCard />
-
-        {/* CTA Button */}
+        {/* Continue to CPR button */}
         <button
+          type="button"
           onClick={() => router.push('/emergency/cpr')}
-          className="w-full bg-emergency text-white font-bold py-4 px-6 rounded-lg hover:bg-emergency-dark transition-colors text-lg shadow-lg"
+          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-xl transition-colors text-lg shadow-lg"
         >
-          Start CPR Guidance →
+          Continue to CPR Coach &rarr;
         </button>
       </main>
+
+      {/* Orchestration Pill + Drawer */}
+      <OrchestrationPill
+        onClick={openDrawer}
+        unseenCount={unseenCount}
+      />
+      <OrchestrationDrawer
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); lastSeenRef.current = state.events.length; }}
+        state={state}
+        mode={urlMode}
+      />
     </div>
   );
 }
