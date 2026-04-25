@@ -35,16 +35,25 @@ export default function DemoPage() {
             <span className="text-sm font-bold tracking-tight">CardiacLink</span>
           </Link>
           <span className="text-zinc-600">|</span>
-          <span className="text-xs text-zinc-400 font-medium">Demo Orchestration View</span>
+          <span className="text-xs text-zinc-400 font-medium">Orchestration Demo</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500">
+            PLAYBACK
+          </span>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/emergency/dispatch"
+            className="text-[10px] font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
+            Switch to Bystander View
+          </Link>
           <div className="flex items-center gap-1.5">
             <div className={`w-2 h-2 rounded-full ${state.phase !== 'idle' ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
             <span className="text-[10px] text-zinc-400 font-mono">
               {state.phase !== 'idle' ? '8 agents online' : 'standby'}
             </span>
           </div>
-          <span className="text-[10px] text-zinc-600 font-mono">Fetch.ai uAgents + Mapbox + deck.gl</span>
+          <span className="text-[10px] text-zinc-600 font-mono">Fetch.ai uAgents + Mapbox</span>
         </div>
       </header>
 
