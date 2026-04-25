@@ -2,6 +2,7 @@
 import * as React from 'react';
 
 const KEY = 'lifelink:sosStartedAt';
+const DISPATCH_KEY = 'lifelink:dispatchConfirmedAt';
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour — drop stale timers from previous browser sessions
 
 export function startSosTimer() {
@@ -19,7 +20,54 @@ export function startSosTimer() {
 export function clearSosTimer() {
   if (typeof window === 'undefined') return;
   window.sessionStorage.removeItem(KEY);
+  window.sessionStorage.removeItem(DISPATCH_KEY);
   window.dispatchEvent(new CustomEvent('lifelink:sos-timer'));
+}
+
+export function markDispatchConfirmed() {
+  if (typeof window === 'undefined') return;
+  const existing = window.sessionStorage.getItem(DISPATCH_KEY);
+  if (existing) {
+    const v = Number(existing);
+    if (Number.isFinite(v) && Date.now() - v < MAX_AGE_MS) return;
+  }
+  window.sessionStorage.setItem(DISPATCH_KEY, String(Date.now()));
+  window.dispatchEvent(new CustomEvent('lifelink:sos-timer'));
+}
+
+export function getDispatchElapsedNow(): number {
+  if (typeof window === 'undefined') return 0;
+  const v = window.sessionStorage.getItem(DISPATCH_KEY);
+  if (!v) return 0;
+  const start = Number(v);
+  if (!Number.isFinite(start)) return 0;
+  return Math.max(0, Math.floor((Date.now() - start) / 1000));
+}
+
+export function isDispatchConfirmed(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.sessionStorage.getItem(DISPATCH_KEY) != null;
+}
+
+/** Live ticking elapsed seconds since 911 dispatch was confirmed. 0 if not confirmed. */
+export function useDispatchElapsed(): { seconds: number; confirmed: boolean } {
+  const [state, setState] = React.useState<{ seconds: number; confirmed: boolean }>({ seconds: 0, confirmed: false });
+
+  React.useEffect(() => {
+    const tick = () => setState({ seconds: getDispatchElapsedNow(), confirmed: isDispatchConfirmed() });
+    tick();
+    const id = setInterval(tick, 500);
+    const onChange = () => tick();
+    window.addEventListener('lifelink:sos-timer', onChange);
+    window.addEventListener('storage', onChange);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('lifelink:sos-timer', onChange);
+      window.removeEventListener('storage', onChange);
+    };
+  }, []);
+
+  return state;
 }
 
 export function getSosElapsedNow(): number {

@@ -5,23 +5,33 @@ import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { SlideToConfirm } from '@/components/lifelink/SlideToConfirm';
 import { X, FONT } from '@/components/lifelink/tokens';
+import { markDispatchConfirmed, useDispatchElapsed } from '@/components/lifelink/sosTimer';
+import { useHelperFlow } from '@/components/lifelink/helperFlow';
 
 export default function DispatchUnconsciousPage() {
   const router = useRouter();
-  // 911 starts as a slide-to-confirm gate; once confirmed, helpers + EMS dispatch and a live ring counter starts.
-  const [confirmedAt, setConfirmedAt] = React.useState<number | null>(null);
-  const [ringSeconds, setRingSeconds] = React.useState(0);
+  const { seconds: dispatchSec, confirmed: dispatched } = useDispatchElapsed();
+  const flow = useHelperFlow();
 
-  React.useEffect(() => {
-    if (confirmedAt == null) return;
-    const tick = () => setRingSeconds(Math.max(0, Math.floor((Date.now() - confirmedAt) / 1000)));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [confirmedAt]);
+  const ringText = `${Math.floor(dispatchSec / 60)}:${String(dispatchSec % 60).padStart(2, '0')}`;
+  const alertedCount = flow.alertedCount; // 0 → 3 as time passes
+  const acceptedRows = flow.rows.filter(r => (r.state === 'accepted' || r.state === 'arriving' || r.state === 'on_scene') && r.helper.id !== 'ems');
+  const closestEnRoute = acceptedRows[0];
 
-  const dispatched = confirmedAt != null;
-  const ringText = `${Math.floor(ringSeconds / 60)}:${String(ringSeconds % 60).padStart(2, '0')}`;
+  let helpersTitle: string;
+  let helpersSub: string;
+  if (alertedCount === 0) {
+    helpersTitle = 'Notifying nearby helpers…';
+    helpersSub = 'Sending alerts within 2 mi';
+  } else if (acceptedRows.length === 0) {
+    helpersTitle = `${alertedCount} ${alertedCount === 1 ? 'helper' : 'helpers'} notified`;
+    helpersSub = 'Waiting for accept';
+  } else if (closestEnRoute) {
+    helpersTitle = `${closestEnRoute.helper.name.split(' ·')[0]} en route · ${acceptedRows.length} of ${alertedCount} accepted`;
+    helpersSub = closestEnRoute.rowEtaText === 'ON SCENE' ? 'on scene' : `ETA ${closestEnRoute.rowEtaText} · AED en route`;
+  } else {
+    helpersSub = ''; helpersTitle = '';
+  }
 
   return (
     <Screen bg={X.PAPER} padTop={0}>
@@ -53,7 +63,7 @@ export default function DispatchUnconsciousPage() {
               iconName="phone"
               fillBg={X.GREEN}
               thumbBg={X.GREEN}
-              onConfirm={() => setConfirmedAt(Date.now())}
+              onConfirm={() => markDispatchConfirmed()}
             />
           </div>
         ) : (
@@ -71,14 +81,33 @@ export default function DispatchUnconsciousPage() {
           </div>
         )}
 
-        {/* Helpers + location cards — dimmed until 911 is confirmed */}
+        {/* Helpers card — counts up incrementally as alerts fan out */}
         <div style={{ marginTop: 10, padding: 14, background: X.BLUE_BG, border: `1px solid ${X.BLUE}33`, borderRadius: 14, display: 'flex', alignItems: 'center', gap: 12, opacity: dispatched ? 1 : 0.45, transition: 'opacity 220ms ease-out' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 22, background: X.BLUE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="user" size={20} color="#fff" stroke={2}/>
+          <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0 }}>
+            {/* Pulse-ring on the helpers icon while we're still notifying */}
+            {dispatched && acceptedRows.length === 0 && (
+              <div style={{ position: 'absolute', inset: -4, borderRadius: '50%', border: `1.5px solid ${X.BLUE}55`, animation: 'll-pulse-ring 1.8s ease-out infinite' }}/>
+            )}
+            <div style={{ width: 44, height: 44, borderRadius: 22, background: X.BLUE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="user" size={20} color="#fff" stroke={2}/>
+            </div>
+            {dispatched && (
+              <div style={{
+                position: 'absolute', top: -4, right: -6, minWidth: 20, height: 20,
+                padding: '0 5px', borderRadius: 10,
+                background: '#fff', color: X.BLUE, fontSize: 10, fontWeight: 800,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: FONT.mono, border: `2px solid ${X.BLUE_BG}`,
+              }}>{alertedCount}</div>
+            )}
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: X.BLUE }}>{dispatched ? '3 nearby helpers alerted' : '3 nearby helpers waiting'}</div>
-            <div style={{ fontSize: 11, color: X.BLUE, opacity: 0.85 }}>Closest 0.3 mi · AED en route</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: X.BLUE }}>
+              {!dispatched ? '3 nearby helpers waiting' : helpersTitle}
+            </div>
+            <div style={{ fontSize: 11, color: X.BLUE, opacity: 0.85 }}>
+              {!dispatched ? 'Closest 0.3 mi · AED en route' : helpersSub}
+            </div>
           </div>
         </div>
 

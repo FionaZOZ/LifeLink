@@ -11,6 +11,25 @@ const IDEAL_LO = 5.0, IDEAL_HI = 6.0;
 const pct = (v: number) => ((v - DEPTH_MIN) / (DEPTH_MAX - DEPTH_MIN)) * 100;
 const FALLBACK_DEPTH = 5.4;
 
+const HW_CUES_OK = [
+  '"Good depth. Keep going."',
+  '"Solid rhythm — hold that depth."',
+  '"You\'re right in the band."',
+  '"Strong compressions — don\'t stop."',
+];
+const HW_CUES_FALLBACK = [
+  '"Let go fully between pushes."',
+  '"Push hard. Push fast."',
+  '"Twice per second."',
+  '"Center of the chest."',
+];
+
+function fmtMmSs(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 // Map sensor voltage (0–5V on RP-S40-ST) to a believable compression depth (0–7cm).
 // 4.0V (PEAK threshold) → 5.6cm (just inside ideal band).
 // 5.0V (max) → 7.0cm (too hard).
@@ -43,6 +62,14 @@ function useRateFromCount(count: number) {
 export default function CPRAssistHWPage() {
   const cpr = useSerialCPR();
   const connected = cpr.isConnected && cpr.isReceiving;
+  const startRef = React.useRef<number>(0);
+  const [, forceTick] = React.useState(0);
+  React.useEffect(() => {
+    startRef.current = Date.now();
+    const id = setInterval(() => forceTick(v => v + 1), 250);
+    return () => clearInterval(id);
+  }, []);
+  const elapsedMs = startRef.current ? Date.now() - startRef.current : 0;
 
   const liveDepth = connected && cpr.lastSample
     ? voltageToDepth(cpr.lastSample.voltage)
@@ -160,15 +187,33 @@ export default function CPRAssistHWPage() {
           </div>
         </div>
 
-        <div style={{ marginTop: 10, padding: 10, borderRadius: 12, background: depthColor === X.GREEN ? X.GREEN : X.AMBER, color: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Icon name="volume" size={14} color="#fff" stroke={2}/>
-          <div style={{ flex: 1, fontSize: 12, fontWeight: 700 }}>
-            {connected
-              ? (inBand ? '"Good depth. Keep going."' : liveDepth < IDEAL_LO ? '"Push harder. Use your body weight."' : '"Ease up — too deep."')
-              : '"Let go fully between pushes."'}
-          </div>
-          <div style={{ fontSize: 9, fontFamily: FONT.mono, opacity: 0.85 }}>{connected ? 'live' : '0:32'}</div>
-        </div>
+        {(() => {
+          let cueText: string;
+          let cueBg: string;
+          if (connected) {
+            if (!inBand) {
+              cueBg = liveDepth < IDEAL_LO ? X.RED : X.AMBER;
+              cueText = liveDepth < IDEAL_LO
+                ? `"Push harder · ${liveDepth.toFixed(1)} cm. Use your body weight."`
+                : `"Ease up — ${liveDepth.toFixed(1)} cm is too deep."`;
+            } else {
+              cueBg = X.GREEN;
+              const idx = Math.floor(elapsedMs / 4500) % HW_CUES_OK.length;
+              cueText = HW_CUES_OK[idx];
+            }
+          } else {
+            cueBg = X.AMBER;
+            const idx = Math.floor(elapsedMs / 4500) % HW_CUES_FALLBACK.length;
+            cueText = HW_CUES_FALLBACK[idx];
+          }
+          return (
+            <div style={{ marginTop: 10, padding: 10, borderRadius: 12, background: cueBg, color: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Icon name="volume" size={14} color="#fff" stroke={2}/>
+              <div style={{ flex: 1, fontSize: 12, fontWeight: 700 }}>{cueText}</div>
+              <div style={{ fontSize: 9, fontFamily: FONT.mono, opacity: 0.85 }}>{fmtMmSs(Math.floor(elapsedMs / 1000))}</div>
+            </div>
+          );
+        })()}
 
         {cpr.error && (
           <div style={{ marginTop: 8, padding: 8, borderRadius: 8, background: 'rgba(225,29,46,0.18)', border: '1px solid rgba(225,29,46,0.4)', fontSize: 11, color: '#fff', fontFamily: FONT.mono }}>

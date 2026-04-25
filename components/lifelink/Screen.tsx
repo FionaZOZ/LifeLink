@@ -5,9 +5,15 @@ import { useRouter } from 'next/navigation';
 import { X, FONT } from './tokens';
 import { Icon } from './Icon';
 import { useSosElapsed, fmtElapsed } from './sosTimer';
+import { HelperToast } from './HelperToast';
 
 export function Stage({ children }: { children: React.ReactNode }) {
-  return <div className="ll-stage">{children}</div>;
+  return (
+    <div className="ll-stage">
+      {children}
+      <HelperToast/>
+    </div>
+  );
 }
 
 type ScreenProps = {
