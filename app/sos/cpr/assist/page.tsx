@@ -131,25 +131,32 @@ function PhaseRingCircle({ phase, size = 220 }: { phase: PhaseInfo; size?: numbe
   );
 }
 
-function PatchBanner({ cpr, connected, onOpenProfile }: { cpr: Cpr; connected: boolean; onOpenProfile?: () => void }) {
+function PatchBanner({ cpr, connected, effectiveProfile, isFallbackProfile = false, onOpenProfile }: {
+  cpr: Cpr;
+  connected: boolean;
+  effectiveProfile?: SerialPatientProfile | null;
+  isFallbackProfile?: boolean;
+  onOpenProfile?: () => void;
+}) {
   // useSerialCPR's `isSupported` is computed synchronously from `navigator`,
   // which differs between SSR and client. Gate the dynamic copy behind a
   // post-mount flag so the first paint matches what the server emitted.
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
-  const hasProfile = mounted && !!cpr.patientProfile;
-  const profileName = cpr.patientProfile?.name;
+  const hasProfile = mounted && !!effectiveProfile;
+  const profileName = effectiveProfile?.name;
 
-  // Three primary states: OFFLINE / CONNECTED-but-no-profile / CONNECTED-with-profile.
-  // When profile is loaded the banner becomes a "tap to view" affordance.
+  // Four primary states: OFFLINE / CONNECTING / STREAMING-loading / READY.
+  // Suffix the READY state with " · DEMO" when we're showing the fallback
+  // profile so the user knows it's not live Arduino data.
   const label = !mounted
     ? 'PATCH OFFLINE · PLUG IN TO CONNECT'
     : !cpr.isSupported ? 'WEB SERIAL UNSUPPORTED'
       : cpr.isConnecting ? 'PATCH CONNECTING…'
       : connected
         ? hasProfile
-          ? `PATCH READY · TAP TO VIEW ${profileName ? profileName.toUpperCase() : 'PROFILE'}`
+          ? `PATCH READY · TAP TO VIEW ${profileName ? profileName.toUpperCase() : 'PROFILE'}${isFallbackProfile ? ' · DEMO' : ''}`
           : `PATCH STREAMING · LOADING PROFILE… (${cpr.sampleCount})`
         : cpr.isConnected ? 'PATCH WAITING FOR DATA'
           : 'PATCH OFFLINE · PLUG IN TO CONNECT';
@@ -165,14 +172,16 @@ function PatchBanner({ cpr, connected, onOpenProfile }: { cpr: Cpr; connected: b
     void (connected ? cpr.disconnect() : cpr.connect());
   };
 
-  // Banner colour: amber when offline, green when streaming with profile,
-  // blue when streaming but profile still pending so the user knows the
-  // patch IS connected and we're waiting on JSON, not a hardware fault.
+  // Banner colour: amber offline, blue streaming (no profile yet), green
+  // streaming + real profile, amber-tinted-green for the demo fallback so
+  // it's distinguishable but not alarming.
   const tone = !mounted || !connected
     ? { bg: 'rgba(232,133,44,0.15)', border: 'rgba(232,133,44,0.4)', dot: X.AMBER, fg: X.AMBER }
-    : hasProfile
-      ? { bg: 'rgba(31,138,77,0.15)', border: 'rgba(31,138,77,0.4)', dot: X.GREEN, fg: X.GREEN }
-      : { bg: 'rgba(44,102,232,0.15)', border: 'rgba(44,102,232,0.4)', dot: X.BLUE, fg: X.BLUE };
+    : !hasProfile
+      ? { bg: 'rgba(44,102,232,0.15)', border: 'rgba(44,102,232,0.4)', dot: X.BLUE, fg: X.BLUE }
+      : isFallbackProfile
+        ? { bg: 'rgba(232,133,44,0.18)', border: 'rgba(232,133,44,0.45)', dot: X.AMBER, fg: X.AMBER }
+        : { bg: 'rgba(31,138,77,0.15)', border: 'rgba(31,138,77,0.4)', dot: X.GREEN, fg: X.GREEN };
 
   return (
     <button
@@ -232,6 +241,48 @@ function usePatchProfileSheet(profile: SerialPatientProfile | null): {
   return { open, dismiss, openManually };
 }
 
+// ── DEMO FALLBACK PROFILE ─────────────────────────────────────────────────
+// When the Arduino sketch is the older firmware that doesn't handle the
+// PROFILE serial command, the bystander would be stuck in "PATCH STREAMING ·
+// LOADING PROFILE…" forever. To keep the demo unblocked we surface this
+// hardcoded profile (matches PaulJiang's sketch character-for-character) as
+// a fallback after 6 s of streaming with no profile JSON. As soon as a real
+// profile arrives, the fallback is replaced.
+const DEMO_FALLBACK_PROFILE: SerialPatientProfile = {
+  name: 'John Doe',
+  dob: '1999-01-01',
+  bloodType: 'O+',
+  phone: '123-456-7890',
+  address: '123 Example St, Irvine, CA',
+  allergies: 'Penicillin',
+  conditions: 'Diabetes',
+  medications: 'Insulin',
+  emergencyContact: { name: 'Jane Doe', relation: 'Mother', phone: '123-555-7890' },
+  physician: { name: 'Dr. Smith', phone: '123-555-1111' },
+  notes: 'CPR responder: check allergies and current medication first.',
+};
+const FALLBACK_AFTER_MS = 6000;
+
+function useEffectiveProfile(cpr: ReturnType<typeof useSerialCPR>): {
+  profile: SerialPatientProfile | null;
+  isFallback: boolean;
+} {
+  const realProfile = cpr.patientProfile;
+  const connected = cpr.isConnected && cpr.isReceiving;
+  const [showFallback, setShowFallback] = React.useState(false);
+
+  React.useEffect(() => {
+    if (realProfile) { setShowFallback(false); return; }
+    if (!connected) { setShowFallback(false); return; }
+    const t = setTimeout(() => setShowFallback(true), FALLBACK_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [realProfile, connected]);
+
+  if (realProfile) return { profile: realProfile, isFallback: false };
+  if (showFallback) return { profile: DEMO_FALLBACK_PROFILE, isFallback: true };
+  return { profile: null, isFallback: false };
+}
+
 // ── PROFILE REQUEST RETRY ─────────────────────────────────────────────────
 // Self-healing retry for PROFILE\n. The first PROFILE request inside
 // useSerialCPR.connect() can race against Arduino's setup-time Serial wait;
@@ -275,23 +326,25 @@ export default function CPRAssistPage() {
   }, []);
   const elapsedMs = startRef.current ? Date.now() - startRef.current : 0;
 
-  // Patient profile sheet — only relevant when hardware is connected.
-  const sheet = usePatchProfileSheet(cpr.patientProfile);
+  // Effective patient profile: prefer Arduino-supplied data, fall back to a
+  // hardcoded demo profile after 6 s if the firmware doesn't respond to PROFILE.
+  const effective = useEffectiveProfile(cpr);
+  const sheet = usePatchProfileSheet(effective.profile);
   // Re-issue PROFILE\n a few times if the first request was missed.
   useProfileRetry(cpr);
 
   return (
     <>
       {connected
-        ? <HardwareLayout cpr={cpr} elapsedMs={elapsedMs} onOpenProfile={sheet.openManually}/>
-        : <PhoneOnlyLayout cpr={cpr} elapsedMs={elapsedMs} onOpenProfile={sheet.openManually}/>
+        ? <HardwareLayout cpr={cpr} elapsedMs={elapsedMs} effectiveProfile={effective.profile} isFallbackProfile={effective.isFallback} onOpenProfile={sheet.openManually}/>
+        : <PhoneOnlyLayout cpr={cpr} elapsedMs={elapsedMs} effectiveProfile={effective.profile} isFallbackProfile={effective.isFallback} onOpenProfile={sheet.openManually}/>
       }
       <PatientProfileSheet
-        profile={cpr.patientProfile}
+        profile={effective.profile}
         open={sheet.open}
         onDismiss={sheet.dismiss}
-        syncedAt={cpr.profileSyncedAt}
-        syncError={cpr.profileSyncError}
+        syncedAt={effective.isFallback ? null : cpr.profileSyncedAt}
+        syncError={effective.isFallback ? 'Demo profile · Arduino sketch needs reflash for live data' : cpr.profileSyncError}
       />
     </>
   );
@@ -303,7 +356,7 @@ export default function CPRAssistPage() {
 // (~16.4s) → 2 breaths (~5s) → repeat. Compression count auto-increments
 // based on the assumption that the user is matching the metronome.
 // ───────────────────────────────────────────────────────────────────────────
-function PhoneOnlyLayout({ cpr, elapsedMs, onOpenProfile }: { cpr: Cpr; elapsedMs: number; onOpenProfile?: () => void }) {
+function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, onOpenProfile }: { cpr: Cpr; elapsedMs: number; effectiveProfile?: SerialPatientProfile | null; isFallbackProfile?: boolean; onOpenProfile?: () => void }) {
   const phase = derivePhase(elapsedMs);
   const isPush = phase.phase === 'PUSH';
   const cycleNum = phase.cyclesCompleted + 1;
@@ -318,7 +371,7 @@ function PhoneOnlyLayout({ cpr, elapsedMs, onOpenProfile }: { cpr: Cpr; elapsedM
       <EmergencyBanner/>
       <ReassessPrompt cyclesCompleted={phase.cyclesCompleted}/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
-        <PatchBanner cpr={cpr} connected={false} onOpenProfile={onOpenProfile}/>
+        <PatchBanner cpr={cpr} connected={false} effectiveProfile={effectiveProfile} isFallbackProfile={isFallbackProfile} onOpenProfile={onOpenProfile}/>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>
@@ -396,7 +449,7 @@ function useRateFromCount(count: number) {
   return rate;
 }
 
-function HardwareLayout({ cpr, elapsedMs, onOpenProfile }: { cpr: Cpr; elapsedMs: number; onOpenProfile?: () => void }) {
+function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, onOpenProfile }: { cpr: Cpr; elapsedMs: number; effectiveProfile?: SerialPatientProfile | null; isFallbackProfile?: boolean; onOpenProfile?: () => void }) {
   const liveDepth = cpr.lastSample ? voltageToDepth(cpr.lastSample.voltage) : 0;
   const liveCount = cpr.lastSample?.count ?? 0;
   const liveRate = useRateFromCount(cpr.lastSample?.count ?? 0);
@@ -429,7 +482,7 @@ function HardwareLayout({ cpr, elapsedMs, onOpenProfile }: { cpr: Cpr; elapsedMs
       <EmergencyBanner/>
       <ReassessPrompt cyclesCompleted={cyclesCompleted}/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
-        <PatchBanner cpr={cpr} connected={true} onOpenProfile={onOpenProfile}/>
+        <PatchBanner cpr={cpr} connected={true} effectiveProfile={effectiveProfile} isFallbackProfile={isFallbackProfile} onOpenProfile={onOpenProfile}/>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>● CPR · CYCLE {String(cycle).padStart(2, '0')}</div>
