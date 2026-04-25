@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { X, FONT } from './tokens';
 import { Icon } from './Icon';
+import { useSosElapsed, fmtElapsed } from './sosTimer';
 
 export function Stage({ children }: { children: React.ReactNode }) {
   return <div className="ll-stage">{children}</div>;
@@ -63,8 +64,10 @@ export function TopBar({ title, leading = 'back', trailing = null, dark = false,
   );
 }
 
-export function EmergencyBanner({ time = '00:00:23', endHref = '/sos/complete' }: { time?: string; endHref?: string | null }) {
+export function EmergencyBanner({ time, endHref = '/sos/complete' }: { time?: string; endHref?: string | null }) {
   const router = useRouter();
+  const elapsed = useSosElapsed();
+  const display = time ?? fmtElapsed(elapsed);
   return (
     <div style={{
       position: 'absolute', top: 0, left: 0, right: 0,
@@ -84,7 +87,7 @@ export function EmergencyBanner({ time = '00:00:23', endHref = '/sos/complete' }
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
         <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }}/>
         <span style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.6, fontWeight: 700 }}>
-          EMERGENCY ACTIVE · {time}
+          EMERGENCY ACTIVE · {display}
         </span>
       </div>
       {endHref ? (

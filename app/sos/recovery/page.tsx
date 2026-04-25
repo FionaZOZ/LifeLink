@@ -9,7 +9,7 @@ export default function RecoveryPage() {
   const router = useRouter();
   return (
     <Screen bg={X.PAPER} padTop={0}>
-      <EmergencyBanner time="00:00:52"/>
+      <EmergencyBanner/>
 
       <div style={{ padding: '70px 22px 0' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.GREEN, letterSpacing: 1.4, fontWeight: 700 }}>● BREATHING NORMALLY</div>

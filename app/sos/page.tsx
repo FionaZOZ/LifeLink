@@ -4,12 +4,14 @@ import { useRouter } from 'next/navigation';
 import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
+import { startSosTimer } from '@/components/lifelink/sosTimer';
 
 export default function ResponsivenessPage() {
   const router = useRouter();
+  React.useEffect(() => { startSosTimer(); }, []);
   return (
     <Screen bg={X.PAPER} padTop={0}>
-      <EmergencyBanner time="00:00:08"/>
+      <EmergencyBanner/>
 
       <div style={{ padding: '70px 22px 0' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>STEP 1 · CHECK · BEFORE WE CALL</div>

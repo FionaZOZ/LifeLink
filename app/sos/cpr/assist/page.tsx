@@ -8,7 +8,7 @@ import { X, FONT } from '@/components/lifelink/tokens';
 export default function CPRAssistPage() {
   return (
     <Screen bg={X.DARK} padTop={0}>
-      <EmergencyBanner time="00:02:18"/>
+      <EmergencyBanner/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>● CPR · CYCLE 03</div>

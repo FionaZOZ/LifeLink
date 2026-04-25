@@ -56,7 +56,7 @@ export default function CPRAssistHWPage() {
 
   return (
     <Screen bg={X.DARK} padTop={0}>
-      <EmergencyBanner time="00:02:18"/>
+      <EmergencyBanner/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
         {/* Patch status banner — clickable when not connected */}
         <button

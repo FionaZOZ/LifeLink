@@ -9,7 +9,7 @@ export default function DispatchConsciousPage() {
   const router = useRouter();
   return (
     <Screen bg={X.PAPER} padTop={0}>
-      <EmergencyBanner time="00:00:42"/>
+      <EmergencyBanner/>
 
       <div style={{ padding: '70px 22px 0' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.GREEN, letterSpacing: 1.4, fontWeight: 700 }}>● RESPONDING · STAY WITH THEM</div>

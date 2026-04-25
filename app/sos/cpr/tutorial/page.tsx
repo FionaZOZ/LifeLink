@@ -2,14 +2,28 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
-import { DiagramCard } from '@/components/lifelink/Pieces';
 import { X, FONT } from '@/components/lifelink/tokens';
+
+function PhotoCard({ label, sub, src, alt }: { label: string; sub: string; src: string; alt: string }) {
+  return (
+    <div style={{ background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ background: X.BG, height: 130, position: 'relative' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}/>
+      </div>
+      <div style={{ padding: '10px 12px' }}>
+        <div style={{ fontSize: 9, fontFamily: FONT.mono, letterSpacing: 1.2, color: X.RED, fontWeight: 700 }}>{label}</div>
+        <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
 
 export default function CPRTutorialPage() {
   const router = useRouter();
   return (
     <Screen bg={X.PAPER} padTop={0}>
-      <EmergencyBanner time="00:01:02"/>
+      <EmergencyBanner/>
 
       <div style={{ padding: '70px 22px 0' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>BEFORE YOU START</div>
@@ -18,8 +32,8 @@ export default function CPRTutorialPage() {
         </div>
 
         <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <DiagramCard label="① CENTER OF CHEST" sub="Lower half of breastbone" type="placement"/>
-          <DiagramCard label="② STACK YOUR HANDS" sub="Heel of one, palm of the other" type="stack"/>
+          <PhotoCard label="① CENTER OF CHEST" sub="Lower half of breastbone" src="/cpr/hands-position.png" alt="Hands placed on the lower half of the breastbone"/>
+          <PhotoCard label="② STACK YOUR HANDS" sub="Heel of one, palm of the other" src="/cpr/hands-posing.png" alt="Stacking the heel of one hand on top of the other"/>
         </div>
 
         <div style={{ marginTop: 14, padding: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16 }}>

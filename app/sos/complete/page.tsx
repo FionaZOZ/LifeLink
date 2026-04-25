@@ -4,8 +4,32 @@ import Link from 'next/link';
 import { Screen } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
+import { getSosElapsedNow, fmtElapsed, clearSosTimer } from '@/components/lifelink/sosTimer';
+
+// Timeline anchors as fractions of total emergency duration. Real elapsed
+// gets multiplied through these so the timeline rescales to whatever
+// actually happened (5s vs 5min) without ever ordering them out of sequence.
+const TIMELINE_FRACTIONS: { label: string; sub: string; color: string; frac: number }[] = [
+  { label: 'You triggered the call', sub: 'Bystander identified unresponsiveness', color: X.INK,   frac: 0.00 },
+  { label: '911 connected · 3 helpers alerted', sub: 'Location and case info sent', color: X.GREEN, frac: 0.18 },
+  { label: 'You started CPR', sub: 'AHA protocol guided', color: X.RED, frac: 0.45 },
+  { label: 'Sarah arrived with AED', sub: 'Pads applied · 1 shock advised', color: X.AMBER, frac: 0.72 },
+  { label: 'EMS on scene', sub: 'ALS team taking over', color: X.GREEN, frac: 1.00 },
+];
+
+function fmtClock(s: number) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
 
 export default function CompletePage() {
+  // Snapshot the elapsed seconds at mount (so the timeline doesn't drift after we clear).
+  const totalSeconds = React.useMemo(() => Math.max(30, getSosElapsedNow()), []);
+  // CPR duration ≈ 55% of total (between phases 'started CPR' and 'EMS on scene').
+  const cprSeconds = Math.max(20, Math.floor(totalSeconds * 0.55));
+  const compressionsDelivered = Math.round((cprSeconds / 60) * 110); // 110 bpm target
+
   return (
     <Screen bg={X.PAPER} padTop={0}>
       {/* Solid green hero band — replaces the red emergency banner */}
@@ -15,7 +39,7 @@ export default function CompletePage() {
         padding: '14px 22px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, zIndex: 10,
       }}>
         <Icon name="check" size={14} color="#fff" stroke={3}/>
-        <span style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.6, fontWeight: 700 }}>HANDED OFF · 04:30</span>
+        <span style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.6, fontWeight: 700 }}>HANDED OFF · {fmtElapsed(totalSeconds)}</span>
       </div>
 
       <div style={{ padding: '70px 22px 0', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
@@ -30,9 +54,9 @@ export default function CompletePage() {
         {/* Stats strip */}
         <div style={{ marginTop: 16, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 18, padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
           {[
-            { k: '142', l: 'COMPRESSIONS' },
+            { k: String(compressionsDelivered), l: 'COMPRESSIONS' },
             { k: '78%', l: 'IN IDEAL BAND' },
-            { k: '3:18', l: 'CPR DURATION' },
+            { k: fmtClock(cprSeconds), l: 'CPR DURATION' },
           ].map((s, i) => (
             <div key={i} style={{ borderRight: i < 2 ? `1px solid ${X.LINE2}` : 'none', paddingRight: i < 2 ? 8 : 0 }}>
               <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.6, color: X.INK }}>{s.k}</div>
@@ -41,24 +65,21 @@ export default function CompletePage() {
           ))}
         </div>
 
-        {/* Timeline */}
+        {/* Timeline — anchors scaled against the real elapsed total */}
         <div style={{ marginTop: 14, fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>WHAT HAPPENED</div>
         <div style={{ marginTop: 8, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, padding: 6 }}>
-          {[
-            { t: '00:00', label: 'You triggered the call', sub: 'Bystander identified unresponsiveness', color: X.INK },
-            { t: '00:08', label: '911 connected · 3 helpers alerted', sub: 'Location and case info sent', color: X.GREEN },
-            { t: '01:02', label: 'You started CPR', sub: 'AHA protocol guided', color: X.RED },
-            { t: '02:43', label: 'Sarah arrived with AED', sub: 'Pads applied · 1 shock advised', color: X.AMBER },
-            { t: '04:30', label: 'EMS on scene', sub: 'ALS team taking over', color: X.GREEN },
-          ].map((step, i, a) => (
-            <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 8px', borderBottom: i < a.length-1 ? `1px solid ${X.LINE2}` : 'none', alignItems: 'flex-start' }}>
-              <div style={{ minWidth: 44, fontSize: 10, fontFamily: FONT.mono, fontWeight: 700, color: step.color, paddingTop: 2 }}>{step.t}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: X.INK }}>{step.label}</div>
-                <div style={{ fontSize: 11, color: X.INK2 }}>{step.sub}</div>
+          {TIMELINE_FRACTIONS.map((step, i, a) => {
+            const t = Math.round(step.frac * totalSeconds);
+            return (
+              <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 8px', borderBottom: i < a.length-1 ? `1px solid ${X.LINE2}` : 'none', alignItems: 'flex-start' }}>
+                <div style={{ minWidth: 44, fontSize: 10, fontFamily: FONT.mono, fontWeight: 700, color: step.color, paddingTop: 2 }}>{fmtClock(t)}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: X.INK }}>{step.label}</div>
+                  <div style={{ fontSize: 11, color: X.INK2 }}>{step.sub}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Family / hospital notification cards */}
@@ -96,7 +117,7 @@ export default function CompletePage() {
 
       {/* Bottom bar */}
       <div style={{ position: 'absolute', left: 22, right: 22, bottom: 28, display: 'flex', gap: 10 }}>
-        <Link href="/" style={{ textDecoration: 'none', flex: 1, padding: 16, background: X.INK, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 800, letterSpacing: 0.4 }}>
+        <Link href="/" onClick={() => clearSosTimer()} style={{ textDecoration: 'none', flex: 1, padding: 16, background: X.INK, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 800, letterSpacing: 0.4 }}>
           Done · go home
         </Link>
       </div>

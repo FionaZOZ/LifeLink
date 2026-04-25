@@ -11,7 +11,7 @@ export default function NearbyLivePage() {
   const router = useRouter();
   return (
     <Screen padTop={0}>
-      <EmergencyBanner time="00:00:48"/>
+      <EmergencyBanner/>
 
       <div style={{ position: 'absolute', top: 50, left: 0, right: 0, padding: '8px 18px', background: '#fff', borderBottom: `1px solid ${X.LINE}`, display: 'flex', alignItems: 'center', gap: 12, zIndex: 8 }}>
         <button onClick={() => router.back()} aria-label="Back" style={{ all: 'unset', cursor: 'pointer' }}>

@@ -7,6 +7,7 @@ import { Icon, ECGLine } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { useDemoRole, isVolunteer, isPatient } from '@/components/lifelink/demoRole';
 import { useHoldToFire } from '@/components/lifelink/useHoldToFire';
+import { clearSosTimer } from '@/components/lifelink/sosTimer';
 
 const HOLD_MS = 1500;
 // Inner button is 240px, outer ring sits at 280px → scale factor to fill is 280/240 ≈ 1.167
@@ -14,6 +15,8 @@ const HOLD_SCALE = 280 / 240;
 
 export default function HomePage() {
   const [role] = useDemoRole();
+  // Reaching home is implicit confirmation that any in-progress emergency is over.
+  React.useEffect(() => { clearSosTimer(); }, []);
   if (isPatient(role) && !isVolunteer(role)) return <HomePatient/>;
   if (isVolunteer(role)) return <HomeVolunteer patientToo={isPatient(role)}/>;
   return <HomeGuest/>;

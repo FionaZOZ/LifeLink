@@ -9,7 +9,7 @@ export default function BreathingPage() {
   const router = useRouter();
   return (
     <Screen bg={X.PAPER} padTop={0}>
-      <EmergencyBanner time="00:00:38"/>
+      <EmergencyBanner/>
 
       <div style={{ padding: '70px 22px 0' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>STEP 2 · CHECK · DISPATCH SENT</div>
