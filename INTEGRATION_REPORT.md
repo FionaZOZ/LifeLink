@@ -88,7 +88,44 @@ dispatch (persist:true) ──sessionStorage──> cpr (persist:true)
                                       from saved state
 ```
 
+## MongoDB Atlas + FHIR R4 Integration (Post-Integration)
+
+7-phase MongoDB Atlas integration adding FHIR R4 handoff persistence and cleaning up dead Supabase code.
+
+### Phases
+
+| Phase | Description | Key Files |
+|-------|-------------|-----------|
+| 1 | Delete dead Supabase code, fix build | Deleted 5 files, fixed coordinator stubs, Supabase lazy-init proxy, Suspense boundary |
+| 2 | MongoDB Atlas client | `lib/mongo/client.ts`, `scripts/test-mongo.ts` |
+| 3 | FHIR R4 Bundle builder + types | `lib/fhir/types.ts`, `lib/fhir/buildBundle.ts` |
+| 4 | API routes for handoff persistence | `app/api/handoff/route.ts`, `app/api/handoff/[id]/route.ts` |
+| 5 | Wire telemetry hook to persist | `lib/useEmergencyTelemetry.ts` — fire-and-forget POST on resolved |
+| 6 | Demo-visible UI | OrchestrationDrawer badge, demo header counter, data-sources section |
+| 7 | Demo script + verification | `DEMO_SCRIPT.md`, `INTEGRATION_REPORT.md` |
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `lib/mongo/client.ts` | MongoDB connection (dev global, prod module-level, null when unconfigured) |
+| `lib/fhir/types.ts` | Minimal FHIR R4 type definitions |
+| `lib/fhir/buildBundle.ts` | Builds FHIR R4 Bundle from ScenarioState (anonymous Patient, SNOMED/LOINC coded) |
+| `app/api/handoff/route.ts` | POST (persist bundle) + GET (list recent) |
+| `app/api/handoff/[id]/route.ts` | GET single bundle by ObjectId |
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/handoff` | POST | Persist FHIR R4 bundle to MongoDB Atlas |
+| `/api/handoff` | GET | List recent bundles (count + last 10) |
+| `/api/handoff/[id]` | GET | Fetch single bundle document |
+
+### Graceful Degradation
+
+All MongoDB callers return null/unavailable when `MONGODB_URI` is unset. The app continues to work without persistence.
+
 ## Known Pre-existing Issues
 
-- TypeScript errors in `components/NearbyAedMap.tsx`, `components/TriggerButton.tsx`, `lib/agents/aed.ts` — all Supabase type mismatches, not related to integration work
 - `luma.gl` console warning from Mapbox GL internals — cosmetic only
