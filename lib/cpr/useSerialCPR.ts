@@ -10,6 +10,31 @@ export interface SerialCPRSample {
   count: number;
 }
 
+export interface PatientEmergencyContact {
+  name?: string;
+  relation?: string;
+  phone?: string;
+}
+
+export interface PatientPhysician {
+  name?: string;
+  phone?: string;
+}
+
+export interface SerialPatientProfile {
+  name?: string;
+  dob?: string;
+  bloodType?: string;
+  phone?: string;
+  address?: string;
+  allergies?: string;
+  conditions?: string;
+  medications?: string;
+  emergencyContact?: PatientEmergencyContact;
+  physician?: PatientPhysician;
+  notes?: string;
+}
+
 export interface SerialCPRLogEntry {
   id: number;
   timestamp: string;
@@ -26,6 +51,9 @@ export interface SerialCPRState {
   lastSample: SerialCPRSample | null;
   sampleCount: number;
   lastStatus: string | null;
+  patientProfile: SerialPatientProfile | null;
+  profileSyncedAt: string | null;
+  profileSyncError: string | null;
   error: string | null;
   logs: SerialCPRLogEntry[];
 }
@@ -35,12 +63,16 @@ interface ArduinoStatusMessage {
   sensor?: string;
   thresholdVoltage?: number;
   releaseVoltage?: number;
+  profileCommand?: string;
 }
 
 type ParsedSerialLine =
   | { type: 'sample'; sample: SerialCPRSample }
   | { type: 'status'; status: ArduinoStatusMessage }
+  | { type: 'profile'; profile: SerialPatientProfile }
   | null;
+
+const DEFAULT_API_BASE_URL = 'http://localhost:8000';
 
 function formatError(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -53,21 +85,111 @@ function describePort(port: SerialPort): string {
   return `${vendor}, ${product}`;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
+}
+
+function parseNestedContact(value: unknown): PatientEmergencyContact | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const contact: PatientEmergencyContact = {
+    name: asOptionalString(value.name),
+    relation: asOptionalString(value.relation),
+    phone: asOptionalString(value.phone),
+  };
+
+  return Object.values(contact).some(Boolean) ? contact : undefined;
+}
+
+function parseNestedPhysician(value: unknown): PatientPhysician | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const physician: PatientPhysician = {
+    name: asOptionalString(value.name),
+    phone: asOptionalString(value.phone),
+  };
+
+  return Object.values(physician).some(Boolean) ? physician : undefined;
+}
+
+function parsePatientProfile(parsed: Record<string, unknown>): SerialPatientProfile | null {
+  if (parsed.type !== 'profile') return null;
+
+  const profile: SerialPatientProfile = {
+    name: asOptionalString(parsed.name),
+    dob: asOptionalString(parsed.dob),
+    bloodType: asOptionalString(parsed.bloodType),
+    phone: asOptionalString(parsed.phone),
+    address: asOptionalString(parsed.address),
+    allergies: asOptionalString(parsed.allergies),
+    conditions: asOptionalString(parsed.conditions),
+    medications: asOptionalString(parsed.medications),
+    emergencyContact: parseNestedContact(parsed.emergencyContact),
+    physician: parseNestedPhysician(parsed.physician),
+    notes: asOptionalString(parsed.notes),
+  };
+
+  return Object.values(profile).some(Boolean) ? profile : null;
+}
+
+function patientProfileEndpoint(): string {
+  const explicitEndpoint = process.env.NEXT_PUBLIC_PATIENT_PROFILE_ENDPOINT;
+  if (explicitEndpoint) return explicitEndpoint;
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_CARDIACLINK_API_URL || DEFAULT_API_BASE_URL;
+  return `${apiBaseUrl.replace(/\/$/, '')}/api/patient/profile`;
+}
+
+function profileFingerprint(profile: SerialPatientProfile): string {
+  return JSON.stringify(profile);
+}
+
+async function postPatientProfile(profile: SerialPatientProfile): Promise<void> {
+  const response = await fetch(patientProfileEndpoint(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...profile,
+      source: 'arduino_serial',
+      receivedBy: 'volunteer_browser',
+      clientTimestamp: new Date().toISOString(),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+    throw new Error(`Profile sync failed with HTTP ${response.status}${errorBody ? `: ${errorBody}` : ''}`);
+  }
+}
+
 function parseLine(line: string): ParsedSerialLine {
   const trimmed = line.trim();
   if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return null;
 
   try {
-    const parsed = JSON.parse(trimmed) as Partial<SerialCPRSample> & ArduinoStatusMessage;
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (!isRecord(parsed)) return null;
+
+    const profile = parsePatientProfile(parsed);
+    if (profile) {
+      return { type: 'profile', profile };
+    }
 
     if (typeof parsed.status === 'string') {
       return {
         type: 'status',
         status: {
           status: parsed.status,
-          sensor: parsed.sensor,
-          thresholdVoltage: parsed.thresholdVoltage,
-          releaseVoltage: parsed.releaseVoltage,
+          sensor: asOptionalString(parsed.sensor),
+          thresholdVoltage: typeof parsed.thresholdVoltage === 'number' ? parsed.thresholdVoltage : undefined,
+          releaseVoltage: typeof parsed.releaseVoltage === 'number' ? parsed.releaseVoltage : undefined,
+          profileCommand: asOptionalString(parsed.profileCommand),
         },
       };
     }
@@ -106,6 +228,9 @@ export function useSerialCPR() {
     lastSample: null,
     sampleCount: 0,
     lastStatus: null,
+    patientProfile: null,
+    profileSyncedAt: null,
+    profileSyncError: null,
     error: null,
     logs: [],
   });
@@ -119,6 +244,7 @@ export function useSerialCPR() {
   const logIdRef = useRef(0);
   const sampleCounterRef = useRef(0);
   const lastLoggedStatusRef = useRef<string | null>(null);
+  const lastSyncedProfileFingerprintRef = useRef<string | null>(null);
 
   const addLog = useCallback(
     (level: SerialCPRLogEntry['level'], message: string, detail?: string) => {
@@ -159,6 +285,46 @@ export function useSerialCPR() {
       addLog('warn', 'Web Serial unavailable', 'Use Chrome or Edge over HTTPS or localhost.');
     }
   }, [addLog]);
+
+  const syncPatientProfile = useCallback(
+    async (profile: SerialPatientProfile) => {
+      const fingerprint = profileFingerprint(profile);
+      if (lastSyncedProfileFingerprintRef.current === fingerprint) {
+        addLog('info', 'Patient profile already synced', profile.name ? `patient=${profile.name}` : undefined);
+        return;
+      }
+
+      setSerialState((prev) => ({
+        ...prev,
+        patientProfile: profile,
+        profileSyncError: null,
+      }));
+
+      try {
+        await postPatientProfile(profile);
+        const syncedAt = new Date().toISOString();
+        lastSyncedProfileFingerprintRef.current = fingerprint;
+
+        setSerialState((prev) => ({
+          ...prev,
+          patientProfile: profile,
+          profileSyncedAt: syncedAt,
+          profileSyncError: null,
+        }));
+
+        addLog('info', 'Patient profile synced to server', profile.name ? `patient=${profile.name}` : undefined);
+      } catch (error) {
+        const message = formatError(error, 'Failed to sync patient profile to server.');
+        setSerialState((prev) => ({
+          ...prev,
+          patientProfile: profile,
+          profileSyncError: message,
+        }));
+        addLog('error', 'Patient profile sync failed', message);
+      }
+    },
+    [addLog]
+  );
 
   const cleanupReader = useCallback(async () => {
     const reader = readerRef.current;
@@ -207,6 +373,24 @@ export function useSerialCPR() {
     }));
   }, [addLog, cleanupReader]);
 
+  const requestPatientProfile = useCallback(
+    async (port: SerialPort) => {
+      if (!port.writable) {
+        addLog('warn', 'Cannot request patient profile', 'Serial writable stream is unavailable.');
+        return;
+      }
+
+      const writer = port.writable.getWriter();
+      try {
+        await writer.write(new TextEncoder().encode('PROFILE\n'));
+        addLog('info', 'Patient profile requested from Arduino', 'command=PROFILE');
+      } finally {
+        writer.releaseLock();
+      }
+    },
+    [addLog]
+  );
+
   const startReadLoop = useCallback(
     (port: SerialPort) => {
       keepReadingRef.current = true;
@@ -237,12 +421,18 @@ export function useSerialCPR() {
               const parsedLine = parseLine(line);
               if (!parsedLine) continue;
 
+              if (parsedLine.type === 'profile') {
+                void syncPatientProfile(parsedLine.profile);
+                continue;
+              }
+
               if (parsedLine.type === 'status') {
                 const status = parsedLine.status;
                 const detailParts = [
                   status.sensor ? `sensor=${status.sensor}` : null,
                   typeof status.thresholdVoltage === 'number' ? `threshold=${status.thresholdVoltage}V` : null,
                   typeof status.releaseVoltage === 'number' ? `release=${status.releaseVoltage}V` : null,
+                  status.profileCommand ? `profileCommand=${status.profileCommand}` : null,
                 ].filter(Boolean);
                 const statusText = status.status;
 
@@ -290,7 +480,9 @@ export function useSerialCPR() {
           const remaining = textDecoder.decode();
           if (remaining) {
             const parsedLine = parseLine(buffer + remaining);
-            if (parsedLine?.type === 'sample') {
+            if (parsedLine?.type === 'profile') {
+              void syncPatientProfile(parsedLine.profile);
+            } else if (parsedLine?.type === 'sample') {
               sampleCounterRef.current += 1;
               setSerialState((prev) => ({
                 ...prev,
@@ -335,7 +527,7 @@ export function useSerialCPR() {
         }));
       });
     },
-    [addLog]
+    [addLog, syncPatientProfile]
   );
 
   const connect = useCallback(async (): Promise<boolean> => {
@@ -397,7 +589,9 @@ export function useSerialCPR() {
 
         sampleCounterRef.current = 0;
         lastLoggedStatusRef.current = null;
+        lastSyncedProfileFingerprintRef.current = null;
         startReadLoop(port);
+        void requestPatientProfile(port);
 
         setSerialState((prev) => ({
           ...prev,
@@ -406,10 +600,13 @@ export function useSerialCPR() {
           isReceiving: false,
           sampleCount: 0,
           lastSample: null,
+          patientProfile: null,
+          profileSyncedAt: null,
+          profileSyncError: null,
           error: null,
         }));
 
-        addLog('info', 'Arduino serial connected', 'Waiting for JSON sensor lines...');
+        addLog('info', 'Arduino serial connected', 'Waiting for JSON sensor lines and patient profile...');
         return true;
       } catch (error) {
         const message = formatError(error, 'Failed to connect to Arduino serial port.');
@@ -444,7 +641,7 @@ export function useSerialCPR() {
 
     connectPromiseRef.current = connectTask;
     return connectTask;
-  }, [addLog, cleanupReader, disconnect, startReadLoop]);
+  }, [addLog, cleanupReader, disconnect, requestPatientProfile, startReadLoop]);
 
   useEffect(() => {
     return () => {
