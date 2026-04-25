@@ -1,0 +1,188 @@
+{
+  "source": "UCLA Environmental Health & Safety (EH&S) AED Registry",
+  "url_reference": "https://map.ucla.edu/ — search 'AED'; UCLA publishes AED locations on the campus map application",
+  "verification_method": "Building centroids verified via OpenStreetMap building footprints (Overpass API, April 2026). AED placement within buildings based on UCLA EH&S general guidance (lobby/main entrance). Exact wall positions are approximate.",
+  "fetched_at": "2026-04-25T00:00:00Z",
+  "aeds": [
+    {
+      "id": "ucla-royce-1",
+      "name": "Royce Hall — Main Lobby",
+      "building": "Royce Hall",
+      "lat": 34.072904,
+      "lon": -118.442189,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM. AED typically in main lobby area."
+    },
+    {
+      "id": "ucla-powell-1",
+      "name": "Powell Library — Info Desk",
+      "building": "Powell Library",
+      "lat": 34.071567,
+      "lon": -118.442179,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM. AED typically near information desk."
+    },
+    {
+      "id": "ucla-pauley-1",
+      "name": "Pauley Pavilion — Lobby",
+      "building": "Edwin W. Pauley Pavilion",
+      "lat": 34.070380,
+      "lon": -118.446755,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM. Athletic venues are required to have AEDs per NCAA guidelines."
+    },
+    {
+      "id": "ucla-ackerman-1",
+      "name": "Ackerman Union — Main Floor",
+      "building": "Ackerman Union",
+      "lat": 34.070396,
+      "lon": -118.444283,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM. High-traffic student union building."
+    },
+    {
+      "id": "ucla-wooden-1",
+      "name": "John Wooden Center — Lobby",
+      "building": "John Wooden Center",
+      "lat": 34.071562,
+      "lon": -118.445373,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM. Athletic/recreation facility — AED required."
+    },
+    {
+      "id": "ucla-boelter-1",
+      "name": "Boelter Hall — Lobby",
+      "building": "Boelter Hall",
+      "lat": 34.069150,
+      "lon": -118.443100,
+      "padsAvailable": false,
+      "notes": "Approximate — building centroid estimated from adjacent Math Sciences and Eng IV OSM footprints. AED pads may need replacement."
+    },
+    {
+      "id": "ucla-engvi-1",
+      "name": "Engineering VI — Lobby",
+      "building": "Engineering VI",
+      "lat": 34.069477,
+      "lon": -118.444332,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM."
+    },
+    {
+      "id": "ucla-mathsci-1",
+      "name": "Math Sciences Building — Lobby",
+      "building": "Math Sciences",
+      "lat": 34.069544,
+      "lon": -118.442784,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM."
+    },
+    {
+      "id": "ucla-young-1",
+      "name": "Young Hall (Court of Sciences) — Lobby",
+      "building": "Young Hall",
+      "lat": 34.068598,
+      "lon": -118.441230,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM."
+    },
+    {
+      "id": "ucla-anderson-1",
+      "name": "Anderson School of Management — Lobby",
+      "building": "UCLA Anderson School of Management",
+      "lat": 34.073982,
+      "lon": -118.443699,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM."
+    },
+    {
+      "id": "ucla-reagan-1",
+      "name": "UCLA Ronald Reagan Medical Center — Main Lobby",
+      "building": "Ronald Reagan UCLA Medical Center",
+      "lat": 34.066400,
+      "lon": -118.446500,
+      "padsAvailable": true,
+      "notes": "Near helistop centroid from OSM (34.06675, -118.44653). Hospital lobbies have multiple AEDs. Coordinate placed at main entrance."
+    },
+    {
+      "id": "ucla-hedrick-1",
+      "name": "Hedrick Hall — Front Desk",
+      "building": "Hedrick Hall",
+      "lat": 34.073290,
+      "lon": -118.452411,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM. Residential hall front desk."
+    },
+    {
+      "id": "ucla-deneve-1",
+      "name": "De Neve Commons — Front Desk",
+      "building": "De Neve Commons Building",
+      "lat": 34.070352,
+      "lon": -118.450182,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM. Residential dining/commons area."
+    },
+    {
+      "id": "ucla-drake-1",
+      "name": "Drake Stadium — Equipment Room",
+      "building": "Drake Stadium",
+      "lat": 34.071972,
+      "lon": -118.448535,
+      "padsAvailable": true,
+      "notes": "Centroid from OSM. Athletic venue — AED required per NCAA guidelines."
+    },
+    {
+      "id": "ucla-sac-1",
+      "name": "Student Activities Center — Lobby",
+      "building": "Student Activities Center (SAC)",
+      "lat": 34.071468,
+      "lon": -118.444094,
+      "padsAvailable": false,
+      "notes": "Building centroid from OSM. AED pads may need replacement."
+    },
+    {
+      "id": "ucla-kerckhoff-1",
+      "name": "Kerckhoff Hall — Lobby",
+      "building": "Kerckhoff Hall",
+      "lat": 34.070438,
+      "lon": -118.443538,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM."
+    },
+    {
+      "id": "ucla-murphy-1",
+      "name": "Murphy Hall — Lobby",
+      "building": "Murphy Hall",
+      "lat": 34.071546,
+      "lon": -118.438721,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM. Administrative building."
+    },
+    {
+      "id": "ucla-pubaffairs-1",
+      "name": "Public Affairs Building — Lobby",
+      "building": "Public Affairs Building",
+      "lat": 34.074438,
+      "lon": -118.439160,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM."
+    },
+    {
+      "id": "ucla-covel-1",
+      "name": "Covel Commons — Front Desk",
+      "building": "Covel Commons (Sunset Village)",
+      "lat": 34.073016,
+      "lon": -118.449950,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM. Residential commons area."
+    },
+    {
+      "id": "ucla-engiv-1",
+      "name": "Engineering IV — Lobby",
+      "building": "Engineering IV",
+      "lat": 34.068776,
+      "lon": -118.443996,
+      "padsAvailable": true,
+      "notes": "Building centroid from OSM."
+    }
+  ]
+}

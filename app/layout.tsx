@@ -1,24 +1,11 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import "./globals.css";
-import { GeistSans } from "geist/font/sans";
-import { cn } from "@/lib/utils";
-import { Toaster } from "@/components/ui/sonner";
-
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
+import { Stage } from "@/components/lifelink/Screen";
+import { RoleSwitcher } from "@/components/lifelink/RoleSwitcher";
 
 export const metadata: Metadata = {
-  title: "CardiacLink - AI Emergency Response System",
-  description: "Multi-agent AI system for coordinating cardiac arrest emergency response",
+  title: "LifeLink",
+  description: "Emergency response network connecting heart-disease patients with nearby trained volunteers.",
 };
 
 export default function RootLayout({
@@ -27,12 +14,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", GeistSans.variable)}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-        <Toaster />
+    <html lang="en">
+      <body>
+        <Stage>{children}</Stage>
+        <RoleSwitcher />
       </body>
     </html>
   );

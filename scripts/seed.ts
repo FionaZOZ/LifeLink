@@ -1,5 +1,8 @@
 import 'dotenv/config';
-import { supabaseServer } from '../lib/supabase/server';
+import { supabaseServer as _supabaseServer } from '../lib/supabase/server';
+
+// Cast to any — Supabase Database type has no table definitions.
+const supabaseServer = _supabaseServer as any;
 
 const UCI_CENTER = { lat: 33.6405, lon: -117.8443 };
 const RADIUS_KM = 2;

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "leaflet/dist/leaflet.css";
@@ -49,6 +50,29 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /* LifeLink design tokens (from screens-v2.jsx) */
+    --ll-bg: #FAFAF7;
+    --ll-paper: #fff;
+    --ll-ink: #0E0F12;
+    --ll-ink2: #5A5E66;
+    --ll-ink3: #9095A0;
+    --ll-line: #E5E4DE;
+    --ll-line2: #EFEDE6;
+    --ll-red: #E11D2E;
+    --ll-red-deep: #A50F1E;
+    --ll-red-bg: #FBE9EC;
+    --ll-green: #1F8A4D;
+    --ll-green-bg: #E8F5EC;
+    --ll-amber: #E8852C;
+    --ll-amber-bg: #FDF1E0;
+    --ll-blue: #2C66E8;
+    --ll-blue-bg: #E6EEFD;
+    --ll-dark: #0B1018;
+
+    --ll-display: 'Space Grotesk', -apple-system, system-ui, sans-serif;
+    --ll-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --ll-body: 'Inter', -apple-system, "SF Pro Text", system-ui, sans-serif;
   }
   .dark {
     --background: oklch(0.145 0 0);
@@ -85,30 +109,61 @@
   }
   * {
     border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
   }
   body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
-}
-
-/* Custom animations for CardiacLink */
-@keyframes bounce-in {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
+    background: #1a1a1a;
+    color: var(--ll-ink);
+    font-family: var(--ll-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-.animate-bounce-in {
-  animation: bounce-in 0.5s ease-out;
+/* LifeLink keyframes (from styles.css) */
+@keyframes ll-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.06); opacity: 0.85; }
+}
+@keyframes ll-pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+@keyframes ll-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
+}
+@keyframes ll-breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+@keyframes ll-cpr-beat {
+  0% { transform: scale(1); }
+  20% { transform: scale(1.18); }
+  35% { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+.ll-pulse-dot { animation: ll-pulse 1.2s ease-in-out infinite; }
+.ll-blink { animation: ll-blink 0.9s steps(2, end) infinite; }
+.ll-breathe { animation: ll-breathe 2.4s ease-in-out infinite; }
+
+/* Phone-shaped centered viewport for desktop demo, full-width on mobile */
+.ll-stage {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0 auto;
+  background: var(--ll-bg);
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+}
+@media (max-width: 440px) {
+  .ll-stage { box-shadow: none; }
 }

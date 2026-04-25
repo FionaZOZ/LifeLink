@@ -1,10 +1,25 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { runLocationAgent } from './location';
-import { runResponderAgent } from './responder';
-import { runAEDAgent } from './aed';
-import { runCPRAgent } from './cpr';
 import { runDispatchAgent } from './dispatch';
 import { runFamilyAgent } from './family';
+
+// Stubs for agents removed in Supabase cleanup (previously in location.ts, responder.ts, aed.ts, cpr.ts).
+// These were Supabase-dependent and are replaced by the Fetch.ai bus agents + useEmergencyTelemetry hook.
+async function runLocationAgent(emergencyId: string) {
+  console.log(`[LocationAgent] Stub — migrated to Fetch.ai bus. Emergency: ${emergencyId}`);
+  return { status: 'migrated_to_bus' };
+}
+async function runResponderAgent(emergencyId: string) {
+  console.log(`[ResponderAgent] Stub — migrated to Fetch.ai bus. Emergency: ${emergencyId}`);
+  return { status: 'migrated_to_bus' };
+}
+async function runAEDAgent(emergencyId: string) {
+  console.log(`[AEDAgent] Stub — migrated to Fetch.ai bus. Emergency: ${emergencyId}`);
+  return { status: 'migrated_to_bus' };
+}
+async function runCPRAgent(emergencyId: string) {
+  console.log(`[CPRAgent] Stub — migrated to Fetch.ai bus. Emergency: ${emergencyId}`);
+  return { status: 'migrated_to_bus' };
+}
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
