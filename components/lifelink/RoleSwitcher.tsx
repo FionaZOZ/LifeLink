@@ -51,13 +51,14 @@ export function RoleSwitcher() {
           all: 'unset', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '8px 14px',
-          background: X.INK, color: '#fff',
+          background: '#fff', color: X.INK,
+          border: `2px solid ${X.INK}`,
           borderRadius: 999,
-          fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.2, fontWeight: 700,
-          boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
+          fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.2, fontWeight: 800,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.35), 0 0 0 3px rgba(255,255,255,0.4)',
         }}
       >
-        <span style={{ width: 6, height: 6, borderRadius: 3, background: X.GREEN }}/>
+        <span style={{ width: 8, height: 8, borderRadius: 4, background: X.GREEN, boxShadow: `0 0 8px ${X.GREEN}` }}/>
         DEMO · {role.toUpperCase()}
       </button>
     </div>

@@ -63,18 +63,32 @@ export function TopBar({ title, leading = 'back', trailing = null, dark = false,
   );
 }
 
-export function EmergencyBanner({ time = '00:00:23' }: { time?: string }) {
+export function EmergencyBanner({ time = '00:00:23', endHref = '/sos/complete' }: { time?: string; endHref?: string | null }) {
   return (
     <div style={{
       position: 'absolute', top: 0, left: 0, right: 0,
       background: X.RED, color: '#fff',
-      padding: '14px 22px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '14px 14px 8px', display: 'flex', alignItems: 'center',
       gap: 10, zIndex: 10,
     }}>
-      <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }}/>
-      <span style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.6, fontWeight: 700 }}>
-        EMERGENCY ACTIVE · {time}
-      </span>
+      <span style={{ width: 32 }}/>{/* spacer to balance the right-side button */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+        <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }}/>
+        <span style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.6, fontWeight: 700 }}>
+          EMERGENCY ACTIVE · {time}
+        </span>
+      </div>
+      {endHref ? (
+        <Link href={endHref} aria-label="Help arrived — end emergency" style={{
+          textDecoration: 'none',
+          padding: '4px 10px', borderRadius: 999,
+          background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.35)',
+          color: '#fff', fontSize: 10, fontWeight: 800, fontFamily: FONT.mono, letterSpacing: 1,
+          display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
+        }}>
+          EMS HERE ✓
+        </Link>
+      ) : <span style={{ width: 32 }}/>}
     </div>
   );
 }
