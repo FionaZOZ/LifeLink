@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEmergencyTelemetry } from '@/lib/useEmergencyTelemetry';
 import { DemoEmergencyMap } from '@/components/DemoEmergencyMap';
 import { AgentActivityFeed } from '@/components/AgentActivityFeed';
@@ -9,6 +9,24 @@ import Link from 'next/link';
 
 export default function DemoPage() {
   const { state, runScenario, reset, scenarios } = useEmergencyTelemetry({ mode: 'playback' });
+
+  // Live bundle count from MongoDB Atlas
+  const [bundleCount, setBundleCount] = useState<number | null>(null);
+  useEffect(() => {
+    fetch('/api/handoff')
+      .then(r => r.json())
+      .then(d => { if (typeof d.count === 'number') setBundleCount(d.count); })
+      .catch(() => {});
+  }, []);
+  // Refresh count when a bundle is persisted
+  useEffect(() => {
+    if (state.persistence.status === 'persisted') {
+      fetch('/api/handoff')
+        .then(r => r.json())
+        .then(d => { if (typeof d.count === 'number') setBundleCount(d.count); })
+        .catch(() => {});
+    }
+  }, [state.persistence.status]);
 
   const [layers, setLayers] = useState<LayerToggles>({
     aeds: true,
@@ -54,6 +72,11 @@ export default function DemoPage() {
             </span>
           </div>
           <span className="text-[10px] text-zinc-600 font-mono">Fetch.ai uAgents + Mapbox</span>
+          {bundleCount !== null && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              {bundleCount} bundle{bundleCount !== 1 ? 's' : ''} in Atlas
+            </span>
+          )}
           <Link href="/data-sources" className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
             Data Sources
           </Link>

@@ -80,6 +80,21 @@ export default function DataSourcesPage() {
         />
       </Section>
 
+      <Section title="Handoff Persistence (MongoDB Atlas)">
+        <Source
+          label="MongoDB Atlas — FHIR R4 Bundle Storage"
+          url="https://www.mongodb.com/atlas"
+          license="MongoDB Atlas M0 (free tier)"
+          detail="Each completed scenario persists a FHIR R4 document bundle (Patient, Encounter, Observations, Procedure) to MongoDB Atlas for medical-grade audit logging."
+        />
+        <Source
+          label="HL7 FHIR R4 Standard"
+          url="https://www.hl7.org/fhir/R4"
+          license="HL7 public"
+          detail="Bundle type: document. Resources: Patient (anonymous), Encounter (SNOMED 410429000 — Cardiac arrest), Observation (LOINC 8867-4 — Heart rate), Procedure (SNOMED 89666000 — CPR)."
+        />
+      </Section>
+
       <Section title="Clinical Guidelines">
         <Source
           label="American Heart Association — 2020 Guidelines for CPR & Emergency Cardiovascular Care"
