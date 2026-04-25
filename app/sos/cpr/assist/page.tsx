@@ -91,12 +91,31 @@ function derivePhase(elapsedMs: number): PhaseInfo {
 type Cpr = ReturnType<typeof useSerialCPR>;
 
 function PatchBanner({ cpr, connected }: { cpr: Cpr; connected: boolean }) {
+  // useSerialCPR's `isSupported` is computed synchronously from `navigator`,
+  // which differs between SSR and client. We gate the dynamic copy behind a
+  // post-mount flag so the first paint matches what the server emitted.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+
+  const label = !mounted
+    ? 'PATCH OFFLINE — PLUG IN TO CONNECT'
+    : !cpr.isSupported ? 'WEB SERIAL UNSUPPORTED — chrome/edge only'
+      : cpr.isConnecting ? 'PATCH CONNECTING…'
+      : connected ? 'PATCH CONNECTED'
+      : cpr.isConnected ? 'PATCH WAITING FOR DATA'
+      : 'PATCH OFFLINE — PLUG IN TO CONNECT';
+  const trailing = !mounted
+    ? 'plug in to unlock depth bar'
+    : connected ? `50 Hz · samples ${cpr.sampleCount}` : 'plug in to unlock depth bar';
+  const disabled = mounted ? (cpr.isConnecting || !cpr.isSupported) : false;
+  const cursor = !mounted ? 'pointer' : cpr.isSupported ? 'pointer' : 'default';
+
   return (
     <button
       onClick={connected ? cpr.disconnect : cpr.connect}
-      disabled={cpr.isConnecting || !cpr.isSupported}
+      disabled={disabled}
       style={{
-        all: 'unset', cursor: cpr.isSupported ? 'pointer' : 'default',
+        all: 'unset', cursor,
         display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
         width: '100%', boxSizing: 'border-box',
         background: connected ? 'rgba(31,138,77,0.15)' : 'rgba(232,133,44,0.15)',
@@ -106,15 +125,11 @@ function PatchBanner({ cpr, connected }: { cpr: Cpr; connected: boolean }) {
     >
       <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: connected ? X.GREEN : X.AMBER }}/>
       <span style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.2, fontWeight: 700, color: connected ? X.GREEN : X.AMBER }}>
-        {!cpr.isSupported ? 'WEB SERIAL UNSUPPORTED — chrome/edge only'
-          : cpr.isConnecting ? 'PATCH CONNECTING…'
-          : connected ? 'PATCH CONNECTED'
-          : cpr.isConnected ? 'PATCH WAITING FOR DATA'
-          : 'PATCH OFFLINE — PLUG IN TO CONNECT'}
+        {label}
       </span>
       <span style={{ flex: 1 }}/>
       <span style={{ fontSize: 9, fontFamily: FONT.mono, color: connected ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)' }}>
-        {connected ? `50 Hz · samples ${cpr.sampleCount}` : 'plug in to unlock depth bar'}
+        {trailing}
       </span>
     </button>
   );
