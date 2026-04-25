@@ -1,0 +1,20 @@
+{
+  "source": "OpenStreetMap (Overpass API)",
+  "license": "ODbL",
+  "attribution": "© OpenStreetMap contributors",
+  "fetched_at": "2026-04-25T09:57:55.740Z",
+  "bbox": "33.95,-118.55,34.15,-118.35",
+  "query": "[out:json][timeout:25];\n(\n  node[\"emergency\"=\"defibrillator\"](33.95,-118.55,34.15,-118.35);\n  way[\"emergency\"=\"defibrillator\"](33.95,-118.55,34.15,-118.35);\n);\nout center tags;",
+  "count": 1,
+  "aeds": [
+    {
+      "id": 11635542259,
+      "lat": 34.1380037,
+      "lon": -118.3545536,
+      "tags": {
+        "emergency": "defibrillator",
+        "indoor": "yes"
+      }
+    }
+  ]
+}

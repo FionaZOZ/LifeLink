@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "tsx --env-file=.env.local scripts/seed.ts"
+    "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "fetch-aeds": "tsx scripts/fetch-aeds.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

@@ -54,6 +54,9 @@ export default function DemoPage() {
             </span>
           </div>
           <span className="text-[10px] text-zinc-600 font-mono">Fetch.ai uAgents + Mapbox</span>
+          <Link href="/data-sources" className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+            Data Sources
+          </Link>
         </div>
       </header>
 

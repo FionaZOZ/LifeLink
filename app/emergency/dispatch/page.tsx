@@ -9,6 +9,7 @@ import { EmergencyStatusCards } from '@/components/EmergencyStatusCards';
 import { OrchestrationPill } from '@/components/OrchestrationPill';
 import { OrchestrationDrawer } from '@/components/OrchestrationDrawer';
 import { useEmergencyTelemetry } from '@/lib/useEmergencyTelemetry';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
 // Lazy-load the compact map to avoid pulling Mapbox into initial bundle
@@ -204,6 +205,12 @@ export default function DispatchStatus() {
         >
           Continue to CPR Coach &rarr;
         </button>
+
+        <div className="text-center mt-3">
+          <Link href="/data-sources" className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+            Data Sources &amp; Attribution
+          </Link>
+        </div>
       </main>
 
       {/* Orchestration Pill + Drawer */}

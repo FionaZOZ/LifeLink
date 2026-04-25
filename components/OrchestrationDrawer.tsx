@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AgentActivityFeed } from './AgentActivityFeed';
+import Link from 'next/link';
 import type { ScenarioState } from '@/lib/useEmergencyTelemetry';
 import type { LayerToggles } from './DemoControls';
 
@@ -175,6 +176,11 @@ export function OrchestrationDrawer({
         <div className="px-4 py-2 border-t border-zinc-800 shrink-0">
           <div className="text-[9px] text-zinc-600 text-center tracking-wide">
             Caputo &middot; Buter &middot; Schierbeck &middot; MDAgents
+          </div>
+          <div className="text-center mt-1">
+            <Link href="/data-sources" className="text-[9px] text-zinc-600 hover:text-zinc-400 transition-colors underline">
+              All Data Sources
+            </Link>
           </div>
         </div>
       </div>

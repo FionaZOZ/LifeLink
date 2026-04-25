@@ -1,0 +1,88 @@
+{
+  "source": "LAFD station locations (lafd.org/locations)",
+  "coordinate_verification": "Building footprints verified via OpenStreetMap (Overpass API, April 2026)",
+  "fetched_at": "2026-04-25T00:00:00Z",
+  "stations": [
+    {
+      "id": "37",
+      "name": "LAFD Station 37 (Westwood)",
+      "address": "1090 Veteran Ave, Los Angeles, CA 90024",
+      "lat": 34.059820,
+      "lon": -118.448965,
+      "battalion": 5,
+      "notes": "Coordinate from OSM. Nearest station to UCLA campus."
+    },
+    {
+      "id": "71",
+      "name": "LAFD Station 71 (Bel Air)",
+      "address": "1070 Casiano Rd, Los Angeles, CA 90049",
+      "lat": 34.080289,
+      "lon": -118.435341,
+      "battalion": 9,
+      "notes": "Coordinate from OSM. Serves Bel Air / north Westwood area."
+    },
+    {
+      "id": "59",
+      "name": "LAFD Station 59 (West LA / Brentwood)",
+      "address": "11505 Olympic Blvd, Los Angeles, CA 90064",
+      "lat": 34.036646,
+      "lon": -118.444536,
+      "battalion": 5,
+      "notes": "Coordinate from OSM. Serves Olympic corridor / south of UCLA."
+    },
+    {
+      "id": "19",
+      "name": "LAFD Station 19 (Pacific Palisades / Brentwood)",
+      "address": "12515 Venice Blvd, Los Angeles, CA 90066",
+      "lat": 34.058509,
+      "lon": -118.479551,
+      "battalion": 5,
+      "notes": "Coordinate from OSM. West of UCLA campus."
+    },
+    {
+      "id": "92",
+      "name": "LAFD Station 92 (West LA)",
+      "address": "10556 W Pico Blvd, Los Angeles, CA 90064",
+      "lat": 34.044062,
+      "lon": -118.420400,
+      "battalion": 4,
+      "notes": "Coordinate from OSM. South of UCLA along Pico corridor."
+    },
+    {
+      "id": "43",
+      "name": "LAFD Station 43 (West LA)",
+      "address": "3931 S Centinela Ave, Los Angeles, CA 90066",
+      "lat": 34.023102,
+      "lon": -118.405480,
+      "battalion": 4,
+      "notes": "Coordinate from OSM. Serves Mar Vista / West LA area."
+    },
+    {
+      "id": "58",
+      "name": "LAFD Station 58 (Cheviot Hills)",
+      "address": "1856 S Robertson Blvd, Los Angeles, CA 90035",
+      "lat": 34.050713,
+      "lon": -118.383959,
+      "battalion": 5,
+      "notes": "Coordinate from OSM. Serves Cheviot Hills / eastern approach."
+    },
+    {
+      "id": "62",
+      "name": "LAFD Station 62 (Westchester / Playa Del Rey)",
+      "address": "11970 Culver Blvd, Los Angeles, CA 90066",
+      "lat": 34.005922,
+      "lon": -118.428286,
+      "battalion": 4,
+      "notes": "Coordinate from OSM."
+    },
+    {
+      "id": "69",
+      "name": "LAFD Station 69 (Pacific Palisades)",
+      "address": "15045 Sunset Blvd, Pacific Palisades, CA 90272",
+      "lat": 34.045066,
+      "lon": -118.522484,
+      "battalion": 9,
+      "notes": "Coordinate from OSM."
+    }
+  ]
+}

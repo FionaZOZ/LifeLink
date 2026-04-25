@@ -30,6 +30,8 @@ function buildAedGeoJSON(aeds: ScenarioState['nearbyAeds']): GeoJSON.FeatureColl
         name: aed.name,
         padsAvailable: aed.padsAvailable,
         distanceM: aed.distanceM ?? 0,
+        source: aed.source ?? 'unknown',
+        attribution: aed.attribution ?? '',
       })
     )
   );
@@ -86,6 +88,7 @@ function buildEmsPath(
 
 // ── Mapbox layer styles ─────────────────────────────────────────────────────
 
+// AED colors by source: UCLA EH&S = blue (#3b82f6), OSM = green (#22c55e), unknown = yellow (#facc15)
 const aedLayerAvailable: CircleLayer = {
   id: 'aed-available',
   type: 'circle',
@@ -93,7 +96,12 @@ const aedLayerAvailable: CircleLayer = {
   filter: ['==', ['get', 'padsAvailable'], true],
   paint: {
     'circle-radius': 7,
-    'circle-color': '#facc15',
+    'circle-color': [
+      'match', ['get', 'source'],
+      'ucla-ehs', '#3b82f6',
+      'osm', '#22c55e',
+      '#facc15',
+    ] as any,
     'circle-stroke-color': '#000',
     'circle-stroke-width': 1,
     'circle-opacity': 0.85,
@@ -429,8 +437,12 @@ export function DemoEmergencyMap({ state, layers }: DemoEmergencyMapProps) {
             <span className="text-[10px] text-zinc-300">Emergency</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-yellow-400 rounded-full" />
-            <span className="text-[10px] text-zinc-300">AED (pads OK)</span>
+            <div className="w-3 h-3 bg-blue-500 rounded-full" />
+            <span className="text-[10px] text-zinc-300">AED — UCLA EH&S</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full" />
+            <span className="text-[10px] text-zinc-300">AED — OSM</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-zinc-500 rounded-full" />

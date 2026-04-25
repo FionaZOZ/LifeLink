@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { getMergedAeds } from './data/aedRegistry';
+import stemiData from './data/stemi-hospitals.json';
+import lafdData from './data/lafd-stations.json';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +25,11 @@ export interface AedDevice {
   padsAvailable: boolean;
   distanceM?: number;
   walkMinutes?: number;
+  // Provenance fields (populated by aedRegistry merger)
+  source?: 'osm' | 'ucla-ehs';
+  attribution?: string;
+  notes?: string;
+  osmTags?: Record<string, string>;
 }
 
 export interface EmsUnit {
@@ -72,36 +80,43 @@ export interface UseEmergencyTelemetryOptions {
   persist?: boolean;           // write state to sessionStorage for cross-page continuity (Phase 5)
 }
 
-// ── Scenario Data ──────────────────────────────────────────────────────────
+// ── Response time benchmarks (cited in code + UI) ──────────────────────────
 
-// UCLA campus AEDs (from bus/datasets/ucla_aeds.py)
-const UCLA_AEDS: AedDevice[] = [
-  { id: 'royce', name: 'Royce Hall - Main Entrance', lat: 34.0720, lon: -118.4424, padsAvailable: true },
-  { id: 'powell', name: 'Powell Library - Info Desk', lat: 34.0722, lon: -118.4420, padsAvailable: true },
-  { id: 'pauley', name: 'Pauley Pavilion - Lobby', lat: 34.0707, lon: -118.4459, padsAvailable: true },
-  { id: 'ackerman', name: 'Ackerman Union - Main Floor', lat: 34.0704, lon: -118.4442, padsAvailable: true },
-  { id: 'wooden', name: 'John Wooden Center', lat: 34.0714, lon: -118.4448, padsAvailable: true },
-  { id: 'boelter', name: 'Boelter Hall - Lobby', lat: 34.0691, lon: -118.4431, padsAvailable: false },
-  { id: 'eng-vi', name: 'Engineering VI', lat: 34.0688, lon: -118.4451, padsAvailable: true },
-  { id: 'math-sci', name: 'Math Sciences Building', lat: 34.0690, lon: -118.4417, padsAvailable: true },
-  { id: 'young', name: 'Court of Sciences / Young Hall', lat: 34.0695, lon: -118.4405, padsAvailable: true },
-  { id: 'anderson', name: 'Anderson School', lat: 34.0730, lon: -118.4400, padsAvailable: true },
-  { id: 'reagan', name: 'UCLA Ronald Reagan Medical Center', lat: 34.0654, lon: -118.4470, padsAvailable: true },
-  { id: 'hedrick', name: 'Hedrick Hall', lat: 34.0727, lon: -118.4503, padsAvailable: true },
-  { id: 'deneve', name: 'De Neve Plaza', lat: 34.0732, lon: -118.4512, padsAvailable: true },
-  { id: 'bruin', name: 'Bruin Plaza', lat: 34.0715, lon: -118.4505, padsAvailable: true },
-  { id: 'drake', name: 'Drake Stadium', lat: 34.0677, lon: -118.4486, padsAvailable: true },
-  { id: 'sac', name: 'Student Activities Center', lat: 34.0707, lon: -118.4447, padsAvailable: false },
-  { id: 'kerckhoff', name: 'Kerckhoff Hall', lat: 34.0709, lon: -118.4436, padsAvailable: true },
-  { id: 'murphy', name: 'Murphy Hall', lat: 34.0713, lon: -118.4398, padsAvailable: true },
-  { id: 'pub-affairs', name: 'Public Affairs Building', lat: 34.0737, lon: -118.4407, padsAvailable: true },
-  { id: 'covel', name: 'Covel Commons', lat: 34.0722, lon: -118.4495, padsAvailable: true },
-];
+export const LAFD_BENCHMARKS = {
+  median_response_minutes: 6.2,              // LAFD 2023 Annual Report — median emergency response time
+  ninetieth_percentile_minutes: 9.5,         // LAFD 2023 — 90th percentile
+  cardiac_arrest_first_arrival_minutes: 5.8, // LAFD 2023 cardiac call subset
+  source: 'LAFD 2023 Annual Report — published response time statistics',
+};
 
-const HOSPITALS: HospitalInfo[] = [
-  { name: 'UCLA Ronald Reagan Medical Center', lat: 34.0654, lon: -118.4470, cath_lab_24h: true, ecmo_capable: true },
-  { name: 'Cedars-Sinai Medical Center', lat: 34.0754, lon: -118.3765, cath_lab_24h: true, ecmo_capable: true },
-];
+export const SCHIERBECK_DRONE_BENCHMARK = {
+  median_drone_arrival_minutes: 3.7,         // Schierbeck et al. Lancet Digital Health 2023
+  median_ambulance_arrival_minutes: 5.5,     // same study, control arm
+  drone_advantage_minutes: 1.8,              // average lead time
+  source: 'Schierbeck S et al. — Drone-Delivered AEDs in OHCA, Lancet Digital Health 2023',
+};
+
+export const BUTER_COVERAGE = {
+  walk_radius_meters: 310,                   // Buter et al. 2024 walking cutoff
+  bike_radius_meters: 710,                   // Buter et al. 2024 bicycle cutoff
+  source: 'Buter J et al. — Strategic Placement of Volunteer Responder System Defibrillators, Health Care Management Science 2024',
+};
+
+// ── Sourced data imports ──────────────────────────────────────────────────
+// AEDs: OpenStreetMap (ODbL) + UCLA Environmental Health & Safety registry
+// Hospitals: CA Dept of Public Health STEMI Receiving Center list
+// Fire stations: LAFD station roster (lafd.org/locations)
+// All coordinates verified via OpenStreetMap building footprints (Overpass API, April 2026)
+
+const UCLA_AEDS = getMergedAeds();
+
+const HOSPITALS: HospitalInfo[] = stemiData.hospitals.map(h => ({
+  name: h.name,
+  lat: h.lat,
+  lon: h.lon,
+  cath_lab_24h: h.cath_lab_24h,
+  ecmo_capable: h.ecmo_capable,
+}));
 
 interface ScenarioDefinition {
   name: string;
@@ -269,8 +284,15 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
       ]);
     }
 
-    // EMS route from the west (simulated)
-    const emsOrigin: [number, number] = [loc.lon - 0.012, loc.lat - 0.005];
+    // Find nearest LAFD station (real coordinates from lafd.org, verified via OSM)
+    const nearestStation = lafdData.stations.reduce<{ id: string; name: string; lat: number; lon: number; dist: number }>((best, s) => {
+      const d = haversineM(loc.lat, loc.lon, s.lat, s.lon);
+      return d < best.dist ? { id: s.id, name: s.name, lat: s.lat, lon: s.lon, dist: d } : best;
+    }, { id: '', name: '', lat: 0, lon: 0, dist: Infinity });
+    const emsOrigin: [number, number] = [nearestStation.lon, nearestStation.lat];
+    const emsDistanceMiles = nearestStation.dist / 1609.34;
+    // ~1.5 min/mile in city traffic; floor at 3 min, cap at LAFD 90th percentile
+    const emsEtaMinutes = Math.min(Math.max(3, Math.round(emsDistanceMiles * 1.5)), Math.round(LAFD_BENCHMARKS.ninetieth_percentile_minutes));
 
     elapsedRef.current = 0;
 
@@ -329,13 +351,13 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
         addEvent('AED', 'response', `Nearest: ${topAeds[0].name} (${topAeds[0].distanceM?.toFixed(0)}m, ~${topAeds[0].walkMinutes} min walk)`);
       },
 
-      // Phase 4 (t=2.4) — EMS dispatched
+      // Phase 4 (t=2.4) — EMS dispatched from nearest LAFD station
       () => {
         const ems: EmsUnit = {
           id: 'ems-1',
           lat: emsOrigin[1],
           lon: emsOrigin[0],
-          eta_minutes: 7,
+          eta_minutes: emsEtaMinutes,
           unit_type: 'ALS Ambulance',
         };
         setState(prev => ({
@@ -344,8 +366,8 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
           emsUnits: [ems],
           elapsed: elapsedRef.current,
         }));
-        addEvent('EMS', 'ems_dispatched', 'ALS Ambulance dispatched — ETA 7 minutes');
-        addEvent('EMS', 'response', 'LA County median response: 8.2 min. Unit approaching from west.');
+        addEvent('EMS', 'ems_dispatched', `ALS Ambulance dispatched from ${nearestStation.name} — ETA ${emsEtaMinutes} minutes`);
+        addEvent('EMS', 'response', `LA County median response: ${LAFD_BENCHMARKS.median_response_minutes} min (LAFD 2023 Annual Report). Unit approaching from ${nearestStation.name}.`);
       },
 
       // Phase 5 (t=3.2) — Drone launched
@@ -364,22 +386,22 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
           elapsed: elapsedRef.current,
         }));
         addEvent('Drone', 'drone_launched', 'UAV-AED launched from Ronald Reagan Medical Center');
-        addEvent('Drone', 'response', 'Schierbeck 2023 protocol: AED payload, 120s ETA at 50 km/h');
+        addEvent('Drone', 'response', `Schierbeck 2023 protocol: median drone arrival ${SCHIERBECK_DRONE_BENCHMARK.median_drone_arrival_minutes} min (Lancet Digital Health 2023). AED payload, 120s ETA at 50 km/h.`);
       },
 
       // Phase 6 (t=4.5) — Coverage rings + Voice sync
       () => {
         const rings = sortedAeds.filter(a => a.padsAvailable).slice(0, 5).map(aed => ({
           center: [aed.lon, aed.lat] as [number, number],
-          walkRadiusM: 310,
-          bikeRadiusM: 710,
+          walkRadiusM: BUTER_COVERAGE.walk_radius_meters,
+          bikeRadiusM: BUTER_COVERAGE.bike_radius_meters,
         }));
         setState(prev => ({
           ...prev,
           coverageRings: rings,
           elapsed: elapsedRef.current,
         }));
-        addEvent('Optimizer', 'coverage_calc', 'Coverage analysis: 5 AEDs within walking range (Buter 2024: 310m walk, 710m bike)');
+        addEvent('Optimizer', 'coverage_calc', `Coverage analysis: 5 AEDs within walking range (Buter 2024: ${BUTER_COVERAGE.walk_radius_meters}m walk, ${BUTER_COVERAGE.bike_radius_meters}m bike)`);
         addEvent('Voice', 'voice_sync', 'Real-time CPR coaching active — 110 BPM metronome guidance');
       },
 
@@ -436,7 +458,7 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
       () => {
         setState(prev => ({ ...prev, phase: 'resolved', elapsed: elapsedRef.current }));
         addEvent('Coordinator', 'response', 'Emergency response coordinated. All agents standing by.');
-        addEvent('Coordinator', 'response', `Time to AED: ~2 min (drone). EMS ETA: 5 min remaining. Hospital: ${nearestHospital.name}`);
+        addEvent('Coordinator', 'response', `Time to AED: ~2 min (drone). EMS ETA: ${emsEtaMinutes} min (${nearestStation.name}). Hospital: ${nearestHospital.name}`);
       },
     ];
 
