@@ -5,6 +5,7 @@ import { getMergedAeds } from './data/aedRegistry';
 import stemiData from './data/stemi-hospitals.json';
 import lafdData from './data/lafd-stations.json';
 import { buildHandoffBundle } from './fhir/buildBundle';
+import { UCLA_VOLUNTEERS } from './data/volunteers';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,27 @@ export interface HospitalInfo {
   eta_minutes?: number;
 }
 
+export interface VolunteerState {
+  id: string;
+  name: string;
+  startLat: number;
+  startLon: number;
+  currentLat: number;
+  currentLon: number;
+  startBuilding: string;
+  trainingLevel: string;
+  hasAed: boolean;
+  status: 'standby' | 'en_route' | 'arrived';
+  progress: number;        // 0..1 — percent of journey
+  etaSeconds: number;      // computed from distance / speed
+}
+
+export interface AedDeliveryState {
+  deliveredAt: number | null;     // Date.now() of delivery moment
+  deliveredBy: 'drone' | 'volunteer' | null;
+  position: { lat: number; lon: number } | null;
+}
+
 export interface PersistenceState {
   status: 'idle' | 'persisting' | 'persisted' | 'failed' | 'unavailable';
   recordId: string | null;
@@ -77,6 +99,9 @@ export interface ScenarioState {
   triageLevel: string | null;
   elapsed: number; // seconds since scenario start (can be fractional)
   persistence: PersistenceState;
+  volunteers: VolunteerState[];
+  aedDelivery: AedDeliveryState;
+  emsPosition: { lat: number; lon: number; progress: number } | null;
 }
 
 // ── Hook options ──────────────────────────────────────────────────────────
@@ -185,6 +210,9 @@ const INITIAL_STATE: ScenarioState = {
   triageLevel: null,
   elapsed: 0,
   persistence: { status: 'idle', recordId: null },
+  volunteers: [],
+  aedDelivery: { deliveredAt: null, deliveredBy: null, position: null },
+  emsPosition: null,
 };
 
 export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}) {
@@ -208,6 +236,9 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
   const elapsedRef = useRef(state.elapsed);
   const persistDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const autoRunDoneRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
+  const scenarioStartRef = useRef<number>(0);
+  const lastRafUpdateRef = useRef<number>(0);
 
   // ── Persist to sessionStorage (debounced 200ms) ─────────────────────────
 
@@ -223,6 +254,126 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
       if (persistDebounceRef.current) clearTimeout(persistDebounceRef.current);
     };
   }, [state, persist]);
+
+  // ── RAF animation loop — updates volunteer/drone/EMS positions ──────────
+  // Runs in parallel with the existing phase timeline; only updates positions,
+  // never fires events. Throttled to ~30fps to avoid jank.
+
+  useEffect(() => {
+    const phase = state.phase;
+    // Only animate between agents_dispatching and resolved (inclusive)
+    const animatingPhases = ['agents_dispatching', 'aeds_located', 'ems_en_route', 'drone_launched', 'triage_complete', 'handoff_ready', 'resolved'];
+    if (!animatingPhases.includes(phase) || !state.emergencyLocation) {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      return;
+    }
+
+    const emergencyLat = state.emergencyLocation.lat;
+    const emergencyLon = state.emergencyLocation.lon;
+
+    const tick = (now: number) => {
+      // Throttle to ~30fps (33ms)
+      if (now - lastRafUpdateRef.current < 33) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      lastRafUpdateRef.current = now;
+
+      const elapsedSec = (now - scenarioStartRef.current) / 1000;
+      // The animation "starts" at the PARALLEL dispatch time (0.4s in the timeline)
+      const animElapsed = Math.max(0, elapsedSec - 0.4);
+
+      setState(prev => {
+        if (prev.phase === 'idle') return prev;
+
+        let changed = false;
+
+        // ── Volunteers ──
+        const newVolunteers = prev.volunteers.map(v => {
+          if (v.status === 'standby' || v.status === 'arrived') return v;
+          // etaSeconds is the real-world time; compress to fit demo timeline
+          // Demo runs 8s total; volunteers should arrive between 2.5s and 5.5s
+          // Scale factor: compress real ETAs into 1.5-4.5s animation window
+          const scaledEta = Math.max(1.5, Math.min(4.5, v.etaSeconds * 0.015));
+          const progress = Math.min(1, Math.max(0, animElapsed / scaledEta));
+          const newStatus = progress >= 1 ? 'arrived' as const : 'en_route' as const;
+          if (progress !== v.progress || newStatus !== v.status) {
+            changed = true;
+            return {
+              ...v,
+              progress,
+              status: newStatus,
+              currentLat: v.startLat + (emergencyLat - v.startLat) * progress,
+              currentLon: v.startLon + (emergencyLon - v.startLon) * progress,
+            };
+          }
+          return v;
+        });
+
+        // ── Drone position ──
+        let newDrone = prev.drone;
+        let newAedDelivery = prev.aedDelivery;
+        if (prev.drone && prev.drone.status !== 'delivered') {
+          // Drone should arrive at ~2.5s after anim start
+          const droneEta = 2.5;
+          const droneProgress = Math.min(1, Math.max(0, animElapsed / droneEta));
+          const dronePath = prev.drone.path;
+          // Interpolate along path
+          const pathProgress = droneProgress * (dronePath.length - 1);
+          const segIndex = Math.min(Math.floor(pathProgress), dronePath.length - 2);
+          const segT = pathProgress - segIndex;
+          const droneLon = dronePath[segIndex][0] + (dronePath[segIndex + 1][0] - dronePath[segIndex][0]) * segT;
+          const droneLat = dronePath[segIndex][1] + (dronePath[segIndex + 1][1] - dronePath[segIndex][1]) * segT;
+
+          if (droneProgress >= 1) {
+            changed = true;
+            newDrone = { ...prev.drone, lat: emergencyLat, lon: emergencyLon, eta_seconds: 0, status: 'delivered' };
+            if (!prev.aedDelivery.deliveredAt) {
+              newAedDelivery = { deliveredAt: Date.now(), deliveredBy: 'drone', position: { lat: emergencyLat, lon: emergencyLon } };
+            }
+          } else if (Math.abs(droneLat - prev.drone.lat) > 0.00001 || Math.abs(droneLon - prev.drone.lon) > 0.00001) {
+            changed = true;
+            const remainingSec = Math.max(0, Math.round((droneEta - animElapsed) * 48)); // scaled ETA display
+            newDrone = { ...prev.drone, lat: droneLat, lon: droneLon, eta_seconds: remainingSec, status: 'en_route' as const };
+          }
+        }
+
+        // ── EMS position ──
+        let newEmsPosition = prev.emsPosition;
+        if (prev.emsUnits.length > 0) {
+          // EMS should arrive at ~5.5s after anim start (slowest)
+          const emsEta = 5.5;
+          const emsProgress = Math.min(1, Math.max(0, animElapsed / emsEta));
+          const emsUnit = prev.emsUnits[0];
+          const emsLat = emsUnit.lat + (emergencyLat - emsUnit.lat) * emsProgress;
+          const emsLon = emsUnit.lon + (emergencyLon - emsUnit.lon) * emsProgress;
+          if (!prev.emsPosition || Math.abs(emsProgress - prev.emsPosition.progress) > 0.01) {
+            changed = true;
+            newEmsPosition = { lat: emsLat, lon: emsLon, progress: emsProgress };
+          }
+        }
+
+        if (!changed) return prev;
+
+        return {
+          ...prev,
+          volunteers: newVolunteers,
+          drone: newDrone,
+          aedDelivery: newAedDelivery,
+          emsPosition: newEmsPosition,
+        };
+      });
+
+      // Keep looping unless resolved + all arrived
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    };
+  }, [state.phase, state.emergencyLocation]);
 
   const addEvent = useCallback((agent: string, type: AgentEvent['type'], message: string, data?: Record<string, unknown>) => {
     const event: AgentEvent = {
@@ -240,6 +391,10 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     }
     elapsedRef.current = 0;
   }, []);
@@ -303,7 +458,28 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
     // ~1.5 min/mile in city traffic; floor at 3 min, cap at LAFD 90th percentile
     const emsEtaMinutes = Math.min(Math.max(3, Math.round(emsDistanceMiles * 1.5)), Math.round(LAFD_BENCHMARKS.ninetieth_percentile_minutes));
 
+    // Initialize volunteers with their start positions and computed ETAs
+    const initialVolunteers: VolunteerState[] = UCLA_VOLUNTEERS.map(v => ({
+      id: v.id,
+      name: v.name,
+      startLat: v.startLat,
+      startLon: v.startLon,
+      currentLat: v.startLat,
+      currentLon: v.startLon,
+      startBuilding: v.startBuilding,
+      trainingLevel: v.trainingLevel,
+      hasAed: v.hasAed,
+      status: 'standby' as const,
+      progress: 0,
+      etaSeconds: haversineM(v.startLat, v.startLon, loc.lat, loc.lon) / v.walkSpeedMps + v.arrivalDelaySeconds,
+    }));
+
     elapsedRef.current = 0;
+    scenarioStartRef.current = Date.now();
+    lastRafUpdateRef.current = 0;
+
+    // Cancel any previous RAF loop
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
 
     // ── Phase definitions ────────────────────────────────────────────────
     // Compressed ~8s timeline with true parallel dispatch at t=0.4s
@@ -316,6 +492,9 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
           phase: 'call_received',
           emergencyLocation: loc,
           elapsed: elapsedRef.current,
+          volunteers: initialVolunteers,
+          aedDelivery: { deliveredAt: null, deliveredBy: null, position: null },
+          emsPosition: null,
         }));
         addEvent('Coordinator', 'dispatch', `Emergency call received: ${scenario.description}`);
         addEvent('Coordinator', 'dispatch', `Location: ${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}`);
@@ -323,7 +502,13 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
 
       // Phase 1 (t=0.4) — TRUE PARALLEL DISPATCH (Caputo et al.)
       () => {
-        setState(prev => ({ ...prev, phase: 'agents_dispatching', elapsed: elapsedRef.current }));
+        setState(prev => ({
+          ...prev,
+          phase: 'agents_dispatching',
+          elapsed: elapsedRef.current,
+          // Flip all volunteers from standby → en_route
+          volunteers: prev.volunteers.map(v => ({ ...v, status: 'en_route' as const })),
+        }));
         const groupId = `parallel-${Date.now()}`;
         const t0 = Date.now();
         // Fire all 4 dispatches in the same React batch — near-identical timestamps
@@ -605,6 +790,7 @@ export function useEmergencyTelemetry(options: UseEmergencyTelemetryOptions = {}
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
