@@ -8,6 +8,11 @@ import { Call911Banner } from '@/components/Call911Banner';
 import { EmergencyEtaBadge } from '@/components/EmergencyEtaBadge';
 import { NearbyAedMap } from '@/components/NearbyAedMap';
 import { useEmergencyLocation } from '@/lib/useEmergencyLocation';
+// PHASE 4: orchestration integration — ETA strip + drawer
+import { EmergencyStatusCards } from '@/components/EmergencyStatusCards';
+import { OrchestrationPill } from '@/components/OrchestrationPill';
+import { OrchestrationDrawer } from '@/components/OrchestrationDrawer';
+import { useEmergencyTelemetry } from '@/lib/useEmergencyTelemetry';
 
 const IMG_HANDS_POSITION = '/cpr/hands-position.png';
 const IMG_HANDS_POSING = '/cpr/hands-posing.png';
@@ -127,6 +132,29 @@ function CprIllustrationImage({ src, alt }: { src: string; alt: string }) {
 
 export default function CPRGuidance() {
   const router = useRouter();
+
+  // PHASE 4: orchestration telemetry — hydrates from sessionStorage (set by dispatch)
+  const { state: telemetryState } = useEmergencyTelemetry({
+    mode: 'playback',
+    scenarioId: 'royce_hall',
+    persist: true,
+  });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [unseenCount, setUnseenCount] = useState(0);
+  const lastSeenRef = useRef(0);
+
+  useEffect(() => {
+    if (!drawerOpen && telemetryState.events.length > lastSeenRef.current) {
+      setUnseenCount(telemetryState.events.length - lastSeenRef.current);
+    }
+  }, [telemetryState.events.length, drawerOpen]);
+
+  const openDrawer = () => {
+    setDrawerOpen(true);
+    setUnseenCount(0);
+    lastSeenRef.current = telemetryState.events.length;
+  };
+
   const [step, setStep] = useState<CprStep>('consent');
   const [countInSet, setCountInSet] = useState(0);
   const [setNumber, setSetNumber] = useState(1);
@@ -237,6 +265,28 @@ export default function CPRGuidance() {
         color: '#fff',
       }}
     >
+      {/* PHASE 4: sticky ETA strip — does not disturb metronome layout */}
+      {step !== 'consent' && (
+        <div
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 30,
+            background: 'rgba(10, 17, 26, 0.95)',
+            backdropFilter: 'blur(8px)',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            padding: '0.5rem 0.75rem',
+            flexShrink: 0,
+          }}
+        >
+          <EmergencyStatusCards
+            state={telemetryState}
+            visibleCards={['ems', 'drone', 'aed', 'hospital']}
+            layout="row"
+          />
+        </div>
+      )}
+
       {/* Emergency Header */}
       <header
         style={{
@@ -1010,6 +1060,17 @@ export default function CPRGuidance() {
           </div>
         </div>
       )}
+
+      {/* PHASE 4: Orchestration Pill + Drawer */}
+      <OrchestrationPill
+        onClick={openDrawer}
+        unseenCount={unseenCount}
+      />
+      <OrchestrationDrawer
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); lastSeenRef.current = telemetryState.events.length; }}
+        state={telemetryState}
+      />
     </div>
   );
 }
