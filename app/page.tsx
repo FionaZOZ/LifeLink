@@ -6,6 +6,9 @@ import { Screen, TabBar } from '@/components/lifelink/Screen';
 import { Icon, ECGLine } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { useDemoRole, isVolunteer, isPatient } from '@/components/lifelink/demoRole';
+import { useHoldToFire } from '@/components/lifelink/useHoldToFire';
+
+const HOLD_MS = 2000;
 
 export default function HomePage() {
   const [role] = useDemoRole();
@@ -16,6 +19,10 @@ export default function HomePage() {
 
 function HomeGuest() {
   const router = useRouter();
+  const { isHolding, progress, handlers } = useHoldToFire(HOLD_MS, () => router.push('/sos'));
+  const remaining = Math.max(0, HOLD_MS - Math.round(progress * HOLD_MS));
+  const ringR = 130;
+  const ringC = 2 * Math.PI * ringR;
   return (
     <Screen>
       <div style={{ padding: '6px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -24,21 +31,42 @@ function HomeGuest() {
       </div>
 
       <div style={{ position: 'absolute', left: 0, right: 0, top: 90, bottom: 240, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <button onClick={() => router.push('/sos')} aria-label="Start emergency" style={{ all: 'unset', cursor: 'pointer', position: 'relative', width: 280, height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `1.5px solid ${X.RED}33`, animation: 'll-pulse-ring 2.4s ease-out infinite' }}/>
-          <div style={{ position: 'absolute', inset: 14, borderRadius: '50%', border: `1.5px solid ${X.RED}55`, animation: 'll-pulse-ring 2.4s ease-out infinite 0.8s' }}/>
+        <div
+          {...handlers}
+          role="button"
+          aria-label="Start emergency — press and hold for 2 seconds"
+          style={{ touchAction: 'none', userSelect: 'none', cursor: 'pointer', position: 'relative', width: 280, height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          {/* outer ambient pulse (paused while holding) */}
+          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `1.5px solid ${X.RED}33`, animation: 'll-pulse-ring 2.4s ease-out infinite', animationPlayState: isHolding ? 'paused' : 'running' }}/>
+          <div style={{ position: 'absolute', inset: 14, borderRadius: '50%', border: `1.5px solid ${X.RED}55`, animation: 'll-pulse-ring 2.4s ease-out infinite 0.8s', animationPlayState: isHolding ? 'paused' : 'running' }}/>
+
+          {/* progress ring — only visible while holding */}
+          <svg width={280} height={280} viewBox="0 0 280 280" style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)', pointerEvents: 'none', opacity: isHolding ? 1 : 0, transition: 'opacity 120ms linear' }}>
+            <circle cx="140" cy="140" r={ringR} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="5"/>
+            <circle cx="140" cy="140" r={ringR} fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round"
+                    strokeDasharray={ringC} strokeDashoffset={ringC * (1 - progress)}/>
+          </svg>
+
+          {/* main button */}
           <div style={{
             width: 240, height: 240, borderRadius: '50%',
             background: `radial-gradient(circle at 30% 30%, ${X.RED}, ${X.RED_DEEP})`,
             color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 24px 70px rgba(225,29,46,0.42), inset 0 -10px 30px rgba(0,0,0,0.18)',
+            boxShadow: isHolding
+              ? '0 12px 40px rgba(225,29,46,0.55), inset 0 -10px 30px rgba(0,0,0,0.28)'
+              : '0 24px 70px rgba(225,29,46,0.42), inset 0 -10px 30px rgba(0,0,0,0.18)',
+            transform: isHolding ? 'scale(0.96)' : 'scale(1)',
+            transition: 'transform 120ms ease-out, box-shadow 120ms ease-out',
           }}>
             <Icon name="siren" size={42} color="#fff" stroke={2.2}/>
             <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 1.2, fontFamily: FONT.display, marginTop: 10 }}>START</div>
             <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 1.2, fontFamily: FONT.display }}>EMERGENCY</div>
-            <div style={{ fontSize: 11, fontFamily: FONT.mono, opacity: 0.85, marginTop: 10, letterSpacing: 1.4 }}>HOLD · 2s</div>
+            <div style={{ fontSize: 11, fontFamily: FONT.mono, opacity: 0.95, marginTop: 10, letterSpacing: 1.4 }}>
+              {isHolding ? `KEEP HOLDING · ${(remaining/1000).toFixed(1)}s` : 'HOLD · 2s'}
+            </div>
           </div>
-        </button>
+        </div>
         <div style={{ marginTop: 22, fontSize: 14, color: X.INK, fontWeight: 600, textAlign: 'center', maxWidth: 280, lineHeight: 1.4 }}>
           If someone is unresponsive, hold to begin.
         </div>
@@ -64,6 +92,8 @@ function HomeGuest() {
 }
 
 function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
+  const router = useRouter();
+  const { isHolding, progress, handlers } = useHoldToFire(HOLD_MS, () => router.push('/sos'));
   return (
     <Screen>
       <div style={{ padding: '6px 22px 0' }}>
@@ -79,22 +109,31 @@ function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
         </div>
       </div>
 
-      <Link href="/sos" style={{ textDecoration: 'none', display: 'block', margin: '18px 22px 0', padding: 18, borderRadius: 20, background: X.INK, color: '#fff', position: 'relative', overflow: 'hidden' }}>
+      <div
+        {...handlers}
+        role="button"
+        aria-label="Start emergency — press and hold for 2 seconds"
+        style={{ touchAction: 'none', userSelect: 'none', cursor: 'pointer', display: 'block', margin: '18px 22px 0', padding: 18, borderRadius: 20, background: X.INK, color: '#fff', position: 'relative', overflow: 'hidden', transform: isHolding ? 'scale(0.99)' : 'scale(1)', transition: 'transform 120ms ease-out' }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.65 }}>EMERGENCY CALL</div>
             <div style={{ fontSize: 24, fontWeight: 700, marginTop: 6, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.1 }}>
-              Tap if someone is<br/>unresponsive
+              Hold if someone is<br/>unresponsive
             </div>
           </div>
-          <div className="ll-pulse-dot" style={{ width: 56, height: 56, borderRadius: 28, background: X.RED, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 6px rgba(225,29,46,0.18)' }}>
+          <div className="ll-pulse-dot" style={{ width: 56, height: 56, borderRadius: 28, background: X.RED, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 6px rgba(225,29,46,0.18)', animationPlayState: isHolding ? 'paused' : 'running' }}>
             <Icon name="siren" size={26} color="#fff" stroke={2.2}/>
           </div>
         </div>
         <div style={{ marginTop: 14, padding: '10px 0 0', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 14, fontSize: 11, fontFamily: FONT.mono, opacity: 0.75 }}>
-          <span>HOLD 2s</span> · <span>VOICE: &quot;HEY SIRI, CARDIAC EMERGENCY&quot;</span>
+          <span>{isHolding ? `KEEP HOLDING · ${((HOLD_MS - progress * HOLD_MS)/1000).toFixed(1)}s` : 'HOLD 2s'}</span> · <span>VOICE: &quot;HEY SIRI, CARDIAC EMERGENCY&quot;</span>
         </div>
-      </Link>
+        {/* progress bar */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,0.06)' }}>
+          <div style={{ height: '100%', width: `${progress * 100}%`, background: X.RED, opacity: isHolding ? 1 : 0, transition: 'opacity 120ms linear' }}/>
+        </div>
+      </div>
 
       <div style={{ margin: '14px 22px 0', background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 18, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
         {[

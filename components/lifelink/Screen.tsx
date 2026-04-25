@@ -64,14 +64,23 @@ export function TopBar({ title, leading = 'back', trailing = null, dark = false,
 }
 
 export function EmergencyBanner({ time = '00:00:23', endHref = '/sos/complete' }: { time?: string; endHref?: string | null }) {
+  const router = useRouter();
   return (
     <div style={{
       position: 'absolute', top: 0, left: 0, right: 0,
       background: X.RED, color: '#fff',
-      padding: '14px 14px 8px', display: 'flex', alignItems: 'center',
-      gap: 10, zIndex: 10,
+      padding: '14px 12px 8px', display: 'flex', alignItems: 'center',
+      gap: 8, zIndex: 10,
     }}>
-      <span style={{ width: 32 }}/>{/* spacer to balance the right-side button */}
+      <button onClick={() => router.back()} aria-label="Back" style={{
+        all: 'unset', cursor: 'pointer',
+        width: 32, height: 32, borderRadius: 16,
+        background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <Icon name="chevron-right" size={18} color="#fff" stroke={2.6} style={{ transform: 'rotate(180deg)' }}/>
+      </button>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
         <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }}/>
         <span style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.6, fontWeight: 700 }}>
@@ -84,7 +93,7 @@ export function EmergencyBanner({ time = '00:00:23', endHref = '/sos/complete' }
           padding: '4px 10px', borderRadius: 999,
           background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.35)',
           color: '#fff', fontSize: 10, fontWeight: 800, fontFamily: FONT.mono, letterSpacing: 1,
-          display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
+          display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', flexShrink: 0,
         }}>
           EMS HERE ✓
         </Link>
