@@ -112,34 +112,3 @@
 .animate-bounce-in {
   animation: bounce-in 0.5s ease-out;
 }
-
-/* AED drop + fade animations for demo map */
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes aedBounceDrop {
-    0% { transform: translateY(-40px) scale(0.7); opacity: 0.4; }
-    60% { transform: translateY(8px) scale(1.15); opacity: 1; }
-    80% { transform: translateY(-4px) scale(1); }
-    100% { transform: translateY(0) scale(1); }
-  }
-
-  @keyframes aedFadeOut {
-    0% { opacity: 1; }
-    70% { opacity: 1; }
-    100% { opacity: 0; }
-  }
-
-  .animate-aed-bounce-drop {
-    animation: aedBounceDrop 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .animate-aed-fade-out {
-    animation: aedFadeOut 800ms ease-out forwards;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-aed-bounce-drop,
-  .animate-aed-fade-out {
-    animation: none !important;
-  }
-}

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Volume2, VolumeX, Bluetooth } from 'lucide-react';
+import { Volume2, VolumeX, Bluetooth, Usb, AlertTriangle, Activity } from 'lucide-react';
 import { ensureBeatAudioUnlocked, playCompressionTick } from '@/lib/compressionBeatSound';
+import { useSerialCPR } from '@/lib/cpr/useSerialCPR';
 
 interface HardwareFeedback {
   depth: number; // in cm
@@ -11,67 +12,144 @@ interface HardwareFeedback {
   quality: number; // 0-100
 }
 
+const PEAK_VOLTAGE = 4.0;
+const RELEASE_VOLTAGE = 3.7;
+const SESSION_DURATION_SECONDS = 120;
+
+const INITIAL_FEEDBACK: HardwareFeedback = {
+  depth: 0,
+  rate: 0,
+  quality: 0,
+};
+
 export default function CPRHardware() {
   const router = useRouter();
   const [compressions, setCompressions] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [nextCheck, setNextCheck] = useState(120);
+  const [nextCheck, setNextCheck] = useState(SESSION_DURATION_SECONDS);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
   const [userQuestion, setUserQuestion] = useState('');
-  const [feedback, setFeedback] = useState<HardwareFeedback>({
-    depth: 5.2,
-    rate: 110,
-    quality: 85,
-  });
+  const [feedback, setFeedback] = useState<HardwareFeedback>(INITIAL_FEEDBACK);
+  const [isSessionRunning, setIsSessionRunning] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const metronomeRef = useRef<NodeJS.Timeout | null>(null);
-  const feedbackRef = useRef<NodeJS.Timeout | null>(null);
+  const bpmWindowRef = useRef<number[]>([]);
+  const lastCompressionAtRef = useRef<number | null>(null);
+  const lastProcessedCountRef = useRef(0);
+  const sessionStartCountRef = useRef(0);
 
-  const startTimers = () => {
+  const serial = useSerialCPR();
+  const activeVoltage = serial.lastSample?.voltage ?? 0;
+  const isPressed = isSessionRunning && (serial.lastSample?.pressed ?? false);
+
+  useEffect(() => {
+    void ensureBeatAudioUnlocked();
+  }, []);
+
+  useEffect(() => {
+    if (!isSessionRunning) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
     timerRef.current = setInterval(() => {
       setElapsedTime((prev) => prev + 1);
       setNextCheck((prev) => {
         const next = prev - 1;
         if (next <= 0) {
+          setIsSessionRunning(false);
           router.push('/emergency/assessment');
         }
         return next;
       });
     }, 1000);
 
-    const bpm = 110;
-    const interval = (60 / bpm) * 1000;
-
-    metronomeRef.current = setInterval(() => {
-      void playCompressionTick();
-      setCompressions((prev) => prev + 1);
-    }, interval);
-  };
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isSessionRunning, router]);
 
   useEffect(() => {
-    // Unlock audio on mount
+    if (!isSessionRunning || !serial.lastSample) return;
+
+    const depth = mapVoltageToDepth(serial.lastSample.voltage);
+
+    if (!serial.lastSample.success || serial.lastSample.count <= lastProcessedCountRef.current) {
+      setFeedback((prev) => ({
+        ...prev,
+        depth,
+        quality: computeQuality({ depth, rate: prev.rate, voltage: serial.lastSample?.voltage ?? 0 }),
+      }));
+      return;
+    }
+
+    const sample = serial.lastSample;
+    const now = Date.now();
+    const previousCompressionAt = lastCompressionAtRef.current;
+
+    lastProcessedCountRef.current = sample.count;
+    lastCompressionAtRef.current = now;
+    setCompressions(Math.max(0, sample.count - sessionStartCountRef.current));
+    void playCompressionTick();
+
+    setFeedback((prev) => {
+      let rate = prev.rate;
+      if (previousCompressionAt) {
+        const interval = now - previousCompressionAt;
+        if (interval > 0) {
+          const bpm = Math.round(60000 / interval);
+          bpmWindowRef.current.push(bpm);
+          if (bpmWindowRef.current.length > 8) bpmWindowRef.current.shift();
+          rate = Math.round(
+            bpmWindowRef.current.reduce((sum, value) => sum + value, 0) / bpmWindowRef.current.length
+          );
+        }
+      }
+
+      const quality = computeQuality({ depth, rate, voltage: sample.voltage });
+      return { depth, rate, quality };
+    });
+  }, [isSessionRunning, serial.lastSample]);
+
+  const resetSession = () => {
+    const currentArduinoCount = serial.lastSample?.count ?? 0;
+    sessionStartCountRef.current = currentArduinoCount;
+    lastProcessedCountRef.current = currentArduinoCount;
+    lastCompressionAtRef.current = null;
+    bpmWindowRef.current = [];
+    setCompressions(0);
+    setElapsedTime(0);
+    setNextCheck(SESSION_DURATION_SECONDS);
+    setFeedback(INITIAL_FEEDBACK);
+  };
+
+  const handleReadyClick = async () => {
     void ensureBeatAudioUnlocked();
 
-    // Start timers
-    startTimers();
+    if (!serial.isSupported) return;
 
-    // Simulate hardware feedback updates
-    feedbackRef.current = setInterval(() => {
-      setFeedback({
-        depth: 4.0 + Math.random() * 2.5, // 4.0-6.5cm
-        rate: 95 + Math.random() * 35, // 95-130 BPM
-        quality: 60 + Math.random() * 35, // 60-95
-      });
-    }, 500);
+    resetSession();
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (metronomeRef.current) clearInterval(metronomeRef.current);
-      if (feedbackRef.current) clearInterval(feedbackRef.current);
-    };
-  }, [router]);
+    if (!serial.isConnected) {
+      const connected = await serial.connect();
+      if (!connected) return;
+    }
+
+    setIsSessionRunning(true);
+    console.log('[CPR Hardware] Ready clicked. Pressure detection started.');
+  };
+
+  const handleDisconnect = async () => {
+    setIsSessionRunning(false);
+    await serial.disconnect();
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -85,36 +163,78 @@ export default function CPRHardware() {
   };
 
   const getDepthLabel = () => {
+    if (!isSessionRunning) return 'Waiting';
     if (feedback.depth >= 5.0 && feedback.depth <= 6.0) return '✓';
     if (feedback.depth < 5.0) return 'Push deeper!';
     return 'Ease up';
   };
 
   const getRateColor = () => {
+    if (!isSessionRunning || feedback.rate === 0) return 'text-zinc-300';
     if (feedback.rate >= 100 && feedback.rate <= 120) return 'text-success';
     return 'text-amber-500';
   };
 
   const getQualityColor = () => {
+    if (!isSessionRunning) return 'text-zinc-300';
     if (feedback.quality >= 80) return 'text-success';
     if (feedback.quality >= 70) return 'text-amber-500';
     return 'text-red-500';
   };
 
   const getQualityLabel = () => {
+    if (!isSessionRunning) return 'Not started';
     if (feedback.quality >= 80) return 'Good';
     if (feedback.quality >= 70) return 'Needs work';
     return 'Poor';
   };
 
+  const connectionBadge = useMemo(() => {
+    if (serial.isConnected && serial.isReceiving) {
+      return {
+        label: 'Arduino Streaming',
+        className: 'bg-green-600',
+        icon: <Activity className="h-4 w-4" />,
+      };
+    }
+
+    if (serial.isConnected) {
+      return {
+        label: 'Serial Connected',
+        className: 'bg-blue-600',
+        icon: <Bluetooth className="h-4 w-4" />,
+      };
+    }
+
+    return {
+      label: 'Arduino Not Connected',
+      className: 'bg-zinc-700',
+      icon: <Usb className="h-4 w-4" />,
+    };
+  }, [serial.isConnected, serial.isReceiving]);
+
+  const readyLabel = useMemo(() => {
+    if (serial.isConnecting) return 'CONNECTING';
+    if (isPressed) return 'PUSH';
+    if (isSessionRunning) return 'READY';
+    return 'START';
+  }, [isPressed, isSessionRunning, serial.isConnecting]);
+
+  const readyHint = useMemo(() => {
+    if (!serial.isSupported) return 'Use Chrome or Edge over HTTPS/localhost.';
+    if (serial.isConnecting) return 'Opening serial port...';
+    if (!serial.isConnected) return 'Click START to connect Arduino and begin pressure detection.';
+    if (!isSessionRunning) return 'Click START to begin checking pressure threshold.';
+    if (!serial.isReceiving) return 'Connected. Waiting for Arduino JSON sensor data...';
+    return `Detecting pressure. Count when voltage ≥ ${PEAK_VOLTAGE.toFixed(2)}V.`;
+  }, [isSessionRunning, serial.isConnecting, serial.isConnected, serial.isReceiving, serial.isSupported]);
+
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-      {/* Top section */}
       <div className="bg-black px-6 py-8 relative">
-        {/* BLE Connected Badge */}
-        <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1 bg-blue-600 rounded-full text-sm">
-          <Bluetooth className="h-4 w-4" />
-          <span>BLE Connected</span>
+        <div className={`absolute top-4 right-4 flex items-center gap-2 px-3 py-1 rounded-full text-sm ${connectionBadge.className}`}>
+          {connectionBadge.icon}
+          <span>{connectionBadge.label}</span>
         </div>
 
         <div className="max-w-4xl mx-auto">
@@ -154,46 +274,82 @@ export default function CPRHardware() {
         </div>
       </div>
 
-      {/* Center: Metronome */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
-        <div className="text-center mb-8">
-          <div className="relative inline-block mb-8">
-            <div className="w-48 h-48 rounded-full bg-success flex items-center justify-center animate-metronome shadow-2xl">
-              <span className="text-4xl font-bold">PUSH</span>
-            </div>
+        <div className="text-center mb-8 w-full max-w-3xl">
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-5">
+            <button
+              onClick={() => void serial.connect()}
+              disabled={serial.isConnecting || serial.isConnected || !serial.isSupported}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:text-zinc-400 text-sm font-semibold transition-colors"
+            >
+              {serial.isConnecting ? 'Connecting...' : serial.isConnected ? 'Connected' : 'Connect Arduino'}
+            </button>
+            <button
+              onClick={() => void handleDisconnect()}
+              disabled={!serial.isConnected && !serial.isConnecting}
+              className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-800/60 disabled:text-zinc-500 text-sm font-semibold transition-colors"
+            >
+              Disconnect
+            </button>
           </div>
-          <div className="text-lg text-gray-400">110 BPM</div>
+
+          {!serial.isSupported && (
+            <div className="mb-5 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-left text-sm text-amber-200">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>Web Serial 需要在 Chrome 或 Edge 里通过 HTTPS 或 localhost 打开这个页面。</span>
+            </div>
+          )}
+
+          {serial.error && (
+            <div className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+              {serial.error}
+            </div>
+          )}
+
+          <div className="relative inline-block mb-4">
+            <button
+              type="button"
+              onClick={() => void handleReadyClick()}
+              disabled={serial.isConnecting || !serial.isSupported}
+              aria-label="Start CPR pressure detection"
+              className={`w-48 h-48 rounded-full flex items-center justify-center shadow-2xl transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+                isPressed ? 'bg-success animate-metronome' : isSessionRunning ? 'bg-blue-700' : 'bg-zinc-700 hover:bg-zinc-600'
+              }`}
+            >
+              <span className="text-4xl font-bold">{readyLabel}</span>
+            </button>
+          </div>
+          <div className="text-lg text-gray-400">Target: 100–120 BPM</div>
+          <div className="mt-2 text-sm text-zinc-400">{readyHint}</div>
+          <div className="mt-2 text-sm text-zinc-400">
+            Success threshold: ≥ {PEAK_VOLTAGE.toFixed(2)}V • Rearm below {RELEASE_VOLTAGE.toFixed(2)}V
+          </div>
         </div>
 
-        {/* Hardware Feedback Strip */}
         <div className="w-full max-w-3xl bg-gray-800 rounded-lg p-6 mb-6">
           <div className="grid grid-cols-3 gap-6">
-            {/* Depth */}
             <div className="text-center">
               <div className="text-sm text-gray-400 mb-2">Depth</div>
               <div className="relative h-32 w-12 mx-auto bg-gray-700 rounded-full overflow-hidden">
-                {/* Green zone marker */}
                 <div
                   className="absolute left-0 right-0 bg-green-500 bg-opacity-30"
                   style={{
                     bottom: '33%',
                     height: '17%',
                   }}
-                ></div>
-                {/* Current depth fill */}
+                />
                 <div
-                  className="absolute bottom-0 left-0 right-0 bg-success transition-all duration-300"
+                  className="absolute bottom-0 left-0 right-0 bg-success transition-all duration-150"
                   style={{
                     height: `${Math.min((feedback.depth / 7.0) * 100, 100)}%`,
                   }}
-                ></div>
+                />
               </div>
               <div className={`mt-2 font-semibold ${getDepthColor()}`}>
                 {feedback.depth.toFixed(1)}cm {getDepthLabel()}
               </div>
             </div>
 
-            {/* Rate */}
             <div className="text-center">
               <div className="text-sm text-gray-400 mb-2">Rate</div>
               <div className="flex items-center justify-center h-32">
@@ -204,7 +360,6 @@ export default function CPRHardware() {
               <div className="mt-2 text-sm text-gray-400">BPM</div>
             </div>
 
-            {/* Quality */}
             <div className="text-center">
               <div className="text-sm text-gray-400 mb-2">Quality</div>
               <div className="flex items-center justify-center h-32">
@@ -220,10 +375,64 @@ export default function CPRHardware() {
           </div>
         </div>
 
-        {/* Stats */}
+        <div className="w-full max-w-3xl grid grid-cols-2 gap-4 mb-6">
+          <div className="rounded-lg bg-zinc-800 p-4">
+            <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">Live Voltage</div>
+            <div className="text-3xl font-bold text-cyan-400">{activeVoltage.toFixed(3)}V</div>
+            <div className="mt-1 text-sm text-zinc-400">Raw: {serial.lastSample?.raw ?? 0}</div>
+          </div>
+          <div className="rounded-lg bg-zinc-800 p-4">
+            <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">Sensor State</div>
+            <div className={`text-3xl font-bold ${isPressed ? 'text-green-400' : 'text-zinc-300'}`}>
+              {isPressed ? 'Pressed' : isSessionRunning ? 'Released' : 'Not Started'}
+            </div>
+            <div className="mt-1 text-sm text-zinc-400">Successful CPR counts only when threshold is crossed.</div>
+          </div>
+        </div>
+
+        <div className="w-full max-w-3xl rounded-lg bg-zinc-800 p-4 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-zinc-500">Serial Debug Log</div>
+              <div className="text-sm text-zinc-400">
+                Status: {serial.lastStatus ?? 'none'} • Samples: {serial.sampleCount} • Receiving:{' '}
+                {serial.isReceiving ? 'yes' : 'no'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={serial.clearLogs}
+              className="px-3 py-1 rounded-md bg-zinc-700 hover:bg-zinc-600 text-xs font-semibold transition-colors"
+            >
+              Clear logs
+            </button>
+          </div>
+
+          <div className="max-h-40 overflow-y-auto rounded-md bg-black/30 p-3 text-left font-mono text-xs">
+            {serial.logs.length === 0 ? (
+              <div className="text-zinc-500">No serial logs yet. Click Connect Arduino or START.</div>
+            ) : (
+              serial.logs.slice(0, 8).map((log) => (
+                <div
+                  key={log.id}
+                  className={
+                    log.level === 'error'
+                      ? 'text-red-300'
+                      : log.level === 'warn'
+                        ? 'text-amber-300'
+                        : 'text-zinc-300'
+                  }
+                >
+                  [{log.timestamp}] {log.message}{log.detail ? ` — ${log.detail}` : ''}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         <div className="space-y-3 text-lg">
           <div>
-            <span className="text-gray-400">Compressions:</span>{' '}
+            <span className="text-gray-400">Successful compressions:</span>{' '}
             <span className="font-bold text-white">{compressions}</span>
           </div>
           <div>
@@ -237,7 +446,6 @@ export default function CPRHardware() {
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div className="bg-black px-6 py-4 flex items-center justify-between sticky bottom-0">
         <button
           onClick={() => setVoiceEnabled(!voiceEnabled)}
@@ -264,7 +472,6 @@ export default function CPRHardware() {
         </button>
       </div>
 
-      {/* Question Modal */}
       {questionModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-6 z-50">
           <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full">
@@ -303,4 +510,29 @@ export default function CPRHardware() {
       )}
     </div>
   );
+}
+
+function mapVoltageToDepth(voltage: number): number {
+  if (voltage <= 0) return 0;
+  const normalized = Math.max(0, Math.min(1, voltage / 5.0));
+  return Number((normalized * 6.5).toFixed(1));
+}
+
+function computeQuality({ depth, rate, voltage }: { depth: number; rate: number; voltage: number }): number {
+  let score = 0;
+
+  if (depth >= 5.0 && depth <= 6.0) score += 35;
+  else if (depth >= 4.5 && depth <= 6.5) score += 25;
+  else score += 12;
+
+  if (rate >= 100 && rate <= 120) score += 35;
+  else if (rate >= 90 && rate <= 130) score += 25;
+  else if (rate > 0) score += 12;
+
+  if (voltage >= PEAK_VOLTAGE) score += 30;
+  else if (voltage >= 4.3) score += 22;
+  else if (voltage >= 3.8) score += 12;
+  else score += 5;
+
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
