@@ -90,23 +90,61 @@ function derivePhase(elapsedMs: number): PhaseInfo {
 // ── PATCH BANNER (shared between both layouts) ────────────────────────────
 type Cpr = ReturnType<typeof useSerialCPR>;
 
+// ── PHASE RING CIRCLE (shared between both layouts) ───────────────────────
+function PhaseRingCircle({ phase, size = 220 }: { phase: PhaseInfo; size?: number }) {
+  const isPush = phase.phase === 'PUSH';
+  const innerSize = Math.round(size * 0.76);
+  const ringR = (size - 18) / 2; // sit just inside the SVG bounds
+  const ringC = 2 * Math.PI * ringR;
+  return (
+    <div style={{ position: 'relative', width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
+        <circle cx={size/2} cy={size/2} r={ringR} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3"/>
+        <circle
+          cx={size/2} cy={size/2} r={ringR} fill="none"
+          stroke={isPush ? X.RED : X.BLUE} strokeWidth="3" strokeLinecap="round"
+          strokeDasharray={ringC}
+          strokeDashoffset={ringC * (1 - phase.phaseProgress)}
+          style={{ transition: 'stroke-dashoffset 240ms linear, stroke 220ms ease-out' }}
+        />
+      </svg>
+      <div style={{
+        width: innerSize, height: innerSize, borderRadius: innerSize / 2,
+        background: isPush ? X.RED : X.BLUE,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        animation: isPush ? 'll-cpr-beat 0.545s ease-in-out infinite' : 'll-breathe 2.5s ease-in-out infinite',
+        boxShadow: isPush ? '0 0 80px rgba(225,29,46,0.5)' : '0 0 80px rgba(44,102,232,0.4)',
+        transition: 'background 220ms ease-out, box-shadow 220ms ease-out',
+        color: '#fff',
+      }}>
+        <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.95 }}>
+          {isPush ? 'PUSH' : 'BREATHE'}
+        </div>
+        <div style={{ fontSize: Math.round(innerSize * 0.3), fontWeight: 700, fontFamily: FONT.display, lineHeight: 1, marginTop: 2 }}>
+          {isPush ? `${phase.compressionInCycle}/${COMPRESSIONS_PER_CYCLE}` : `${phase.breathInCycle}/${BREATHS_PER_CYCLE}`}
+        </div>
+        <div style={{ fontSize: 10, opacity: 0.85, marginTop: 4 }}>
+          {isPush ? `${TARGET_BPM} BPM` : 'tilt head · pinch nose'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PatchBanner({ cpr, connected }: { cpr: Cpr; connected: boolean }) {
   // useSerialCPR's `isSupported` is computed synchronously from `navigator`,
-  // which differs between SSR and client. We gate the dynamic copy behind a
+  // which differs between SSR and client. Gate the dynamic copy behind a
   // post-mount flag so the first paint matches what the server emitted.
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
   const label = !mounted
-    ? 'PATCH OFFLINE — PLUG IN TO CONNECT'
-    : !cpr.isSupported ? 'WEB SERIAL UNSUPPORTED — chrome/edge only'
+    ? 'PATCH OFFLINE · PLUG IN'
+    : !cpr.isSupported ? 'WEB SERIAL UNSUPPORTED'
       : cpr.isConnecting ? 'PATCH CONNECTING…'
-      : connected ? 'PATCH CONNECTED'
+      : connected ? `PATCH CONNECTED · 50 Hz · ${cpr.sampleCount} samples`
       : cpr.isConnected ? 'PATCH WAITING FOR DATA'
-      : 'PATCH OFFLINE — PLUG IN TO CONNECT';
-  const trailing = !mounted
-    ? 'plug in to unlock depth bar'
-    : connected ? `50 Hz · samples ${cpr.sampleCount}` : 'plug in to unlock depth bar';
+      : 'PATCH OFFLINE · PLUG IN';
   const disabled = mounted ? (cpr.isConnecting || !cpr.isSupported) : false;
   const cursor = !mounted ? 'pointer' : cpr.isSupported ? 'pointer' : 'default';
 
@@ -116,20 +154,20 @@ function PatchBanner({ cpr, connected }: { cpr: Cpr; connected: boolean }) {
       disabled={disabled}
       style={{
         all: 'unset', cursor,
-        display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+        display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
         width: '100%', boxSizing: 'border-box',
         background: connected ? 'rgba(31,138,77,0.15)' : 'rgba(232,133,44,0.15)',
         border: `1px solid ${connected ? 'rgba(31,138,77,0.4)' : 'rgba(232,133,44,0.4)'}`,
         borderRadius: 10, marginBottom: 8,
       }}
     >
-      <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: connected ? X.GREEN : X.AMBER }}/>
-      <span style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.2, fontWeight: 700, color: connected ? X.GREEN : X.AMBER }}>
+      <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: connected ? X.GREEN : X.AMBER, flexShrink: 0 }}/>
+      <span style={{
+        fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.2, fontWeight: 700,
+        color: connected ? X.GREEN : X.AMBER,
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      }}>
         {label}
-      </span>
-      <span style={{ flex: 1 }}/>
-      <span style={{ fontSize: 9, fontFamily: FONT.mono, color: connected ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)' }}>
-        {trailing}
       </span>
     </button>
   );
@@ -210,10 +248,6 @@ function PhoneOnlyLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
   const cueIdx = Math.floor(elapsedMs / 4500) % cueList.length;
   const cue = cueList[cueIdx];
 
-  // Outer phase ring: an SVG circle that fills as the current phase progresses.
-  const ringR = 100;
-  const ringC = 2 * Math.PI * ringR;
-
   return (
     <Screen bg={X.DARK} padTop={0}>
       <EmergencyBanner/>
@@ -227,41 +261,11 @@ function PhoneOnlyLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
           </div>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>{fmtMmSs(Math.floor(elapsedMs / 1000))}</div>
         </div>
-        <CPRToolbar metroOn voiceOn helpersInCall={2}/>
+        <CPRToolbar helpersInCall={2}/>
 
-        {/* Big circle with phase ring overlay */}
-        <div style={{ marginTop: 14, position: 'relative', height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {/* progress ring (sits just outside the inner circle) */}
-          <svg width={220} height={220} viewBox="0 0 220 220" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
-            <circle cx="110" cy="110" r={ringR} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3"/>
-            <circle
-              cx="110" cy="110" r={ringR} fill="none"
-              stroke={isPush ? X.RED : X.BLUE} strokeWidth="3" strokeLinecap="round"
-              strokeDasharray={ringC}
-              strokeDashoffset={ringC * (1 - phase.phaseProgress)}
-              style={{ transition: 'stroke-dashoffset 240ms linear, stroke 220ms ease-out' }}
-            />
-          </svg>
-
-          {/* inner pulsing circle — fast for PUSH, slow for BREATHE */}
-          <div style={{
-            width: 168, height: 168, borderRadius: 84,
-            background: isPush ? X.RED : X.BLUE,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            animation: isPush ? 'll-cpr-beat 0.545s ease-in-out infinite' : 'll-breathe 2.5s ease-in-out infinite',
-            boxShadow: isPush ? '0 0 80px rgba(225,29,46,0.5)' : '0 0 80px rgba(44,102,232,0.4)',
-            transition: 'background 220ms ease-out, box-shadow 220ms ease-out',
-          }}>
-            <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.95 }}>
-              {isPush ? 'PUSH' : 'BREATHE'}
-            </div>
-            <div style={{ fontSize: 50, fontWeight: 700, fontFamily: FONT.display, lineHeight: 1, marginTop: 2 }}>
-              {isPush ? `${phase.compressionInCycle}/${COMPRESSIONS_PER_CYCLE}` : `${phase.breathInCycle}/${BREATHS_PER_CYCLE}`}
-            </div>
-            <div style={{ fontSize: 10, opacity: 0.85, marginTop: 4 }}>
-              {isPush ? `${TARGET_BPM} BPM` : 'tilt head · pinch nose'}
-            </div>
-          </div>
+        {/* Big phase-ring metronome circle */}
+        <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
+          <PhaseRingCircle phase={phase} size={220}/>
         </div>
 
         {/* Stats row */}
@@ -332,11 +336,15 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
   const liveCount = cpr.lastSample?.count ?? 0;
   const liveRate = useRateFromCount(cpr.lastSample?.count ?? 0);
   const displayedRate = liveRate ?? 0;
-  const pressed = !!cpr.lastSample?.pressed;
   const inBand = liveDepth >= IDEAL_LO && liveDepth <= IDEAL_HI;
   const depthColor = inBand ? X.GREEN : (liveDepth < IDEAL_LO ? X.AMBER : X.RED);
-  const cycle = Math.max(1, Math.floor(liveCount / 30) + 1);
-  const cyclesCompleted = Math.floor(liveCount / 30);
+
+  // Same clock-driven phase machine as phone-only — gives the bystander
+  // explicit "PUSH 18/30 → BREATHE 1/2" coaching even with hardware. The
+  // sensor count below is the ground-truth count of actual presses detected.
+  const phase = derivePhase(elapsedMs);
+  const cyclesCompleted = phase.cyclesCompleted;
+  const cycle = phase.cyclesCompleted + 1;
 
   let cueText: string;
   let cueBg: string;
@@ -362,15 +370,15 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>● CPR · CYCLE {String(cycle).padStart(2, '0')}</div>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>{fmtMmSs(Math.floor(elapsedMs / 1000))}</div>
         </div>
-        <CPRToolbar metroOn voiceOn helpersInCall={2}/>
+        <CPRToolbar helpersInCall={2}/>
 
         {/* DEPTH BAR — primary feedback driven by the patch voltage. */}
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>COMPRESSION DEPTH</div>
             <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)', letterSpacing: 1 }}>TARGET 5.0–6.0 cm</div>
           </div>
-          <div style={{ marginTop: 8, position: 'relative', height: 56, background: 'rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ marginTop: 6, position: 'relative', height: 48, background: 'rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{
               position: 'absolute', top: 0, bottom: 0,
               left: `${pct(IDEAL_LO)}%`, width: `${pct(IDEAL_HI) - pct(IDEAL_LO)}%`,
@@ -391,33 +399,24 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
               transition: 'left 80ms linear, background 120ms linear',
             }}>{liveDepth.toFixed(1)} cm</div>
           </div>
-          <div style={{ marginTop: 4, position: 'relative', height: 14, fontFamily: FONT.mono, fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>
+          <div style={{ marginTop: 4, position: 'relative', height: 12, fontFamily: FONT.mono, fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>
             {[0, 2, 4, 5, 6, 7].map(v => (
               <span key={v} style={{ position: 'absolute', left: `${pct(v)}%`, transform: 'translateX(-50%)' }}>{v}</span>
             ))}
           </div>
         </div>
 
-        <div style={{ marginTop: 6, position: 'relative', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, border: '1px solid rgba(255,255,255,0.12)' }}/>
-          <div style={{
-            width: 92, height: 92, borderRadius: 46, background: X.RED,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            transform: pressed ? 'scale(1.18)' : 'scale(1)',
-            transition: 'transform 90ms ease-out',
-            boxShadow: '0 0 60px rgba(225,29,46,0.5)',
-          }}>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.9 }}>PUSH</div>
-            <div style={{ fontSize: 32, fontWeight: 700, fontFamily: FONT.display, lineHeight: 1 }}>{displayedRate || '—'}</div>
-            <div style={{ fontSize: 9, opacity: 0.85 }}>BPM</div>
-          </div>
+        {/* Same phase-ring metronome circle as phone-only, slightly smaller to make
+            room for the depth bar above. Bystander still gets PUSH/BREATHE coaching. */}
+        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center' }}>
+          <PhaseRingCircle phase={phase} size={170}/>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <div>
             <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>RATE</div>
             <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.8, color: displayedRate >= 100 && displayedRate <= 120 ? X.GREEN : X.AMBER }}>{displayedRate || '—'}</div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>bpm · {displayedRate >= 100 && displayedRate <= 120 ? 'ok' : displayedRate < 100 ? 'too slow' : displayedRate > 120 ? 'too fast' : '—'}</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>bpm · {!displayedRate ? 'building rate…' : displayedRate >= 100 && displayedRate <= 120 ? 'ok' : displayedRate < 100 ? 'too slow' : 'too fast'}</div>
           </div>
           <div>
             <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>RECOIL</div>
@@ -427,7 +426,7 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
           <div>
             <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>COUNT</div>
             <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.8 }}>{liveCount}</div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>live</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>sensor live</div>
           </div>
         </div>
 

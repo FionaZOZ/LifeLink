@@ -5,24 +5,114 @@ import { X, FONT } from './tokens';
 import { Icon } from './Icon';
 import { useHelperFlow } from './helperFlow';
 
-export function CPRToolbar({ metroOn = true, voiceOn = true, helpersInCall = 2 }: {
-  metroOn?: boolean; voiceOn?: boolean; helpersInCall?: number;
+/**
+ * CPR top toolbar — three interactive pills:
+ *  - BEAT ON / OFF: toggles the visual metronome cue on the button itself.
+ *    Off state mutes the red pulse-ring + dims the volume icon.
+ *  - HEY LIFELINK: tap to simulate a voice prompt — pill flashes white with
+ *    a "LISTENING…" mic-pulse for ~1.6s, then returns to idle.
+ *  - JOIN CALL / ON CALL: tap to enter / leave the helper group call. ON
+ *    state turns the count badge into a "MUTE" indicator and switches the
+ *    icon to mic so the user can drop voice on the existing channel.
+ */
+export function CPRToolbar({ defaultMetroOn = true, defaultInCall = false, helpersInCall = 2 }: {
+  defaultMetroOn?: boolean;
+  defaultInCall?: boolean;
+  helpersInCall?: number;
 }) {
+  const [metroOn, setMetroOn] = React.useState(defaultMetroOn);
+  const [voiceState, setVoiceState] = React.useState<'idle' | 'listening'>('idle');
+  const [inCall, setInCall] = React.useState(defaultInCall);
+  const [muted, setMuted] = React.useState(false);
+
+  const onToggleMetro = () => setMetroOn(v => !v);
+  const onTriggerVoice = () => {
+    if (voiceState === 'listening') return;
+    setVoiceState('listening');
+    setTimeout(() => setVoiceState('idle'), 1600);
+  };
+  const onToggleCall = () => {
+    setInCall(v => !v);
+    if (inCall) setMuted(false);
+  };
+  const onToggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMuted(v => !v);
+  };
+
+  const listening = voiceState === 'listening';
+
   return (
     <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, background: metroOn ? `${X.RED}22` : 'rgba(255,255,255,0.06)', border: `1px solid ${metroOn ? X.RED : 'rgba(255,255,255,0.12)'}` }}>
+      {/* BEAT toggle */}
+      <button
+        onClick={onToggleMetro}
+        aria-pressed={metroOn}
+        style={{
+          all: 'unset', cursor: 'pointer',
+          position: 'relative', display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 10px', borderRadius: 999,
+          background: metroOn ? `${X.RED}22` : 'rgba(255,255,255,0.06)',
+          border: `1px solid ${metroOn ? X.RED : 'rgba(255,255,255,0.12)'}`,
+        }}
+      >
         {metroOn && <span style={{ position: 'absolute', inset: -3, borderRadius: 999, border: `1px solid ${X.RED}55`, animation: 'll-pulse-ring 1.2s ease-out infinite', pointerEvents: 'none' }}/>}
         <Icon name="volume" size={14} color={metroOn ? '#fff' : 'rgba(255,255,255,0.55)'} stroke={2.2}/>
-        <span style={{ fontSize: 9.5, fontFamily: FONT.mono, letterSpacing: 1, fontWeight: 700, color: metroOn ? '#fff' : 'rgba(255,255,255,0.55)' }}>BEAT {metroOn ? 'ON' : 'OFF'}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, background: voiceOn ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)', border: `1px solid ${voiceOn ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.10)'}` }}>
-        <Icon name="mic" size={14} color={voiceOn ? '#fff' : 'rgba(255,255,255,0.45)'} stroke={2.2}/>
-        <span style={{ fontSize: 9.5, fontFamily: FONT.mono, letterSpacing: 1, fontWeight: 700, color: voiceOn ? '#fff' : 'rgba(255,255,255,0.45)' }}>HEY LIFELINK</span>
-      </div>
-      <button style={{ all: 'unset', position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, background: X.GREEN, border: `1px solid ${X.GREEN}`, cursor: 'pointer' }}>
-        <Icon name="phone" size={14} color="#fff" stroke={2.2}/>
-        <span style={{ fontSize: 9.5, fontFamily: FONT.mono, letterSpacing: 1, fontWeight: 800, color: '#fff' }}>JOIN CALL</span>
-        <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: '#fff', color: X.GREEN, fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{helpersInCall}</span>
+        <span style={{ fontSize: 9.5, fontFamily: FONT.mono, letterSpacing: 1, fontWeight: 700, color: metroOn ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+          BEAT {metroOn ? 'ON' : 'OFF'}
+        </span>
+      </button>
+
+      {/* HEY LIFELINK voice trigger */}
+      <button
+        onClick={onTriggerVoice}
+        aria-pressed={listening}
+        style={{
+          all: 'unset', cursor: 'pointer',
+          position: 'relative', display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 10px', borderRadius: 999,
+          background: listening ? '#fff' : 'rgba(255,255,255,0.10)',
+          border: `1px solid ${listening ? '#fff' : 'rgba(255,255,255,0.22)'}`,
+          transition: 'background 160ms linear, border-color 160ms linear',
+        }}
+      >
+        {listening && <span style={{ position: 'absolute', inset: -3, borderRadius: 999, border: '1px solid rgba(255,255,255,0.55)', animation: 'll-pulse-ring 0.9s ease-out infinite', pointerEvents: 'none' }}/>}
+        <Icon name="mic" size={14} color={listening ? X.INK : '#fff'} stroke={2.2}/>
+        <span style={{ fontSize: 9.5, fontFamily: FONT.mono, letterSpacing: 1, fontWeight: 700, color: listening ? X.INK : '#fff' }}>
+          {listening ? 'LISTENING…' : 'HEY LIFELINK'}
+        </span>
+      </button>
+
+      {/* JOIN CALL / ON CALL */}
+      <button
+        onClick={onToggleCall}
+        aria-pressed={inCall}
+        style={{
+          all: 'unset', cursor: 'pointer',
+          position: 'relative', display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 10px', borderRadius: 999,
+          background: inCall ? X.RED : X.GREEN,
+          border: `1px solid ${inCall ? X.RED : X.GREEN}`,
+          transition: 'background 160ms linear, border-color 160ms linear',
+        }}
+      >
+        <Icon name={inCall ? 'mic' : 'phone'} size={14} color="#fff" stroke={2.2}/>
+        <span style={{ fontSize: 9.5, fontFamily: FONT.mono, letterSpacing: 1, fontWeight: 800, color: '#fff' }}>
+          {inCall ? 'ON CALL' : 'JOIN CALL'}
+        </span>
+        {!inCall ? (
+          <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: '#fff', color: X.GREEN, fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{helpersInCall}</span>
+        ) : (
+          <span
+            onClick={onToggleMute}
+            role="button"
+            aria-pressed={muted}
+            aria-label={muted ? 'Unmute' : 'Mute'}
+            style={{ minWidth: 16, height: 16, padding: '0 5px', borderRadius: 8, background: muted ? '#fff' : 'rgba(0,0,0,0.25)', color: muted ? X.RED : '#fff', fontSize: 8, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          >
+            {muted ? 'MUTED' : 'MUTE'}
+          </span>
+        )}
       </button>
     </div>
   );
