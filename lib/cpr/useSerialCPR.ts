@@ -702,13 +702,28 @@ export function useSerialCPR() {
     };
   }, [disconnect]);
 
+  // Public profile re-request — useful when the auto-PROFILE write right
+  // after port.open() races against the Arduino's setup() Serial-attach wait
+  // and the first request never reaches handleSerialCommands.
+  const requestProfile = useCallback(async (): Promise<boolean> => {
+    if (!portRef.current) return false;
+    try {
+      await requestPatientProfile(portRef.current);
+      return true;
+    } catch (error) {
+      addLog('warn', 'Manual PROFILE request failed', formatError(error, 'Unknown write error'));
+      return false;
+    }
+  }, [addLog, requestPatientProfile]);
+
   return useMemo(
     () => ({
       ...serialState,
       connect,
       disconnect,
       clearLogs,
+      requestProfile,
     }),
-    [serialState, connect, disconnect, clearLogs]
+    [serialState, connect, disconnect, clearLogs, requestProfile]
   );
 }

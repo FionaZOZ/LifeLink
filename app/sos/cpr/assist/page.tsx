@@ -131,40 +131,66 @@ function PhaseRingCircle({ phase, size = 220 }: { phase: PhaseInfo; size?: numbe
   );
 }
 
-function PatchBanner({ cpr, connected }: { cpr: Cpr; connected: boolean }) {
+function PatchBanner({ cpr, connected, onOpenProfile }: { cpr: Cpr; connected: boolean; onOpenProfile?: () => void }) {
   // useSerialCPR's `isSupported` is computed synchronously from `navigator`,
   // which differs between SSR and client. Gate the dynamic copy behind a
   // post-mount flag so the first paint matches what the server emitted.
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
+  const hasProfile = mounted && !!cpr.patientProfile;
+  const profileName = cpr.patientProfile?.name;
+
+  // Three primary states: OFFLINE / CONNECTED-but-no-profile / CONNECTED-with-profile.
+  // When profile is loaded the banner becomes a "tap to view" affordance.
   const label = !mounted
     ? 'PATCH OFFLINE · PLUG IN TO CONNECT'
     : !cpr.isSupported ? 'WEB SERIAL UNSUPPORTED'
       : cpr.isConnecting ? 'PATCH CONNECTING…'
-      : connected ? `PATCH CONNECTED · 50 Hz · ${cpr.sampleCount} samples`
-      : cpr.isConnected ? 'PATCH WAITING FOR DATA'
-      : 'PATCH OFFLINE · PLUG IN TO CONNECT';
+      : connected
+        ? hasProfile
+          ? `PATCH READY · TAP TO VIEW ${profileName ? profileName.toUpperCase() : 'PROFILE'}`
+          : `PATCH STREAMING · LOADING PROFILE… (${cpr.sampleCount})`
+        : cpr.isConnected ? 'PATCH WAITING FOR DATA'
+          : 'PATCH OFFLINE · PLUG IN TO CONNECT';
+
   const disabled = mounted ? (cpr.isConnecting || !cpr.isSupported) : false;
   const cursor = !mounted ? 'pointer' : cpr.isSupported ? 'pointer' : 'default';
 
+  const handleClick = () => {
+    if (connected && hasProfile && onOpenProfile) {
+      onOpenProfile();
+      return;
+    }
+    void (connected ? cpr.disconnect() : cpr.connect());
+  };
+
+  // Banner colour: amber when offline, green when streaming with profile,
+  // blue when streaming but profile still pending so the user knows the
+  // patch IS connected and we're waiting on JSON, not a hardware fault.
+  const tone = !mounted || !connected
+    ? { bg: 'rgba(232,133,44,0.15)', border: 'rgba(232,133,44,0.4)', dot: X.AMBER, fg: X.AMBER }
+    : hasProfile
+      ? { bg: 'rgba(31,138,77,0.15)', border: 'rgba(31,138,77,0.4)', dot: X.GREEN, fg: X.GREEN }
+      : { bg: 'rgba(44,102,232,0.15)', border: 'rgba(44,102,232,0.4)', dot: X.BLUE, fg: X.BLUE };
+
   return (
     <button
-      onClick={() => { void (connected ? cpr.disconnect() : cpr.connect()); }}
+      onClick={handleClick}
       disabled={disabled}
       style={{
         all: 'unset', cursor,
         display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
         width: '100%', boxSizing: 'border-box',
-        background: connected ? 'rgba(31,138,77,0.15)' : 'rgba(232,133,44,0.15)',
-        border: `1px solid ${connected ? 'rgba(31,138,77,0.4)' : 'rgba(232,133,44,0.4)'}`,
+        background: tone.bg,
+        border: `1px solid ${tone.border}`,
         borderRadius: 10, marginBottom: 8,
       }}
     >
-      <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: connected ? X.GREEN : X.AMBER, flexShrink: 0 }}/>
+      <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: tone.dot, flexShrink: 0 }}/>
       <span style={{
         fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.2, fontWeight: 700,
-        color: connected ? X.GREEN : X.AMBER,
+        color: tone.fg,
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {label}
@@ -176,8 +202,13 @@ function PatchBanner({ cpr, connected }: { cpr: Cpr; connected: boolean }) {
 // ── PATIENT PROFILE SHEET HOOK ─────────────────────────────────────────────
 // Detects the patch's profile transitioning from null → object and pops the
 // sheet exactly once per profile fingerprint (so re-pairing the same Arduino
-// during the same session doesn't re-pop it).
-function usePatchProfileSheet(profile: SerialPatientProfile | null): { open: boolean; dismiss: () => void } {
+// during the same session doesn't re-pop it). Also exposes openManually so
+// the user can re-open the sheet from the patch banner after dismissing.
+function usePatchProfileSheet(profile: SerialPatientProfile | null): {
+  open: boolean;
+  dismiss: () => void;
+  openManually: () => void;
+} {
   const [open, setOpen] = React.useState(false);
   const ackedFingerprintRef = React.useRef<string | null>(null);
 
@@ -194,7 +225,39 @@ function usePatchProfileSheet(profile: SerialPatientProfile | null): { open: boo
     setOpen(false);
   }, [profile]);
 
-  return { open, dismiss };
+  const openManually = React.useCallback(() => {
+    if (profile) setOpen(true);
+  }, [profile]);
+
+  return { open, dismiss, openManually };
+}
+
+// ── PROFILE REQUEST RETRY ─────────────────────────────────────────────────
+// Self-healing retry for PROFILE\n. The first PROFILE request inside
+// useSerialCPR.connect() can race against Arduino's setup-time Serial wait;
+// if no profile arrives within RETRY_AFTER_MS we re-issue the command, up to
+// MAX_RETRIES times. The retry stops as soon as a profile lands.
+const RETRY_AFTER_MS = 1800;
+const MAX_RETRIES = 3;
+
+function useProfileRetry(cpr: ReturnType<typeof useSerialCPR>) {
+  const connected = cpr.isConnected && cpr.isReceiving;
+  const hasProfile = !!cpr.patientProfile;
+  React.useEffect(() => {
+    if (!connected || hasProfile) return;
+    let cancelled = false;
+    let attempts = 0;
+    const tick = async () => {
+      if (cancelled) return;
+      attempts += 1;
+      await cpr.requestProfile();
+    };
+    const id = setInterval(() => {
+      if (attempts >= MAX_RETRIES) { clearInterval(id); return; }
+      void tick();
+    }, RETRY_AFTER_MS);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [connected, hasProfile, cpr]);
 }
 
 // ── PAGE: auto-switches between phone-only and hardware-connected layouts ─
@@ -214,12 +277,14 @@ export default function CPRAssistPage() {
 
   // Patient profile sheet — only relevant when hardware is connected.
   const sheet = usePatchProfileSheet(cpr.patientProfile);
+  // Re-issue PROFILE\n a few times if the first request was missed.
+  useProfileRetry(cpr);
 
   return (
     <>
       {connected
-        ? <HardwareLayout cpr={cpr} elapsedMs={elapsedMs}/>
-        : <PhoneOnlyLayout cpr={cpr} elapsedMs={elapsedMs}/>
+        ? <HardwareLayout cpr={cpr} elapsedMs={elapsedMs} onOpenProfile={sheet.openManually}/>
+        : <PhoneOnlyLayout cpr={cpr} elapsedMs={elapsedMs} onOpenProfile={sheet.openManually}/>
       }
       <PatientProfileSheet
         profile={cpr.patientProfile}
@@ -238,7 +303,7 @@ export default function CPRAssistPage() {
 // (~16.4s) → 2 breaths (~5s) → repeat. Compression count auto-increments
 // based on the assumption that the user is matching the metronome.
 // ───────────────────────────────────────────────────────────────────────────
-function PhoneOnlyLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
+function PhoneOnlyLayout({ cpr, elapsedMs, onOpenProfile }: { cpr: Cpr; elapsedMs: number; onOpenProfile?: () => void }) {
   const phase = derivePhase(elapsedMs);
   const isPush = phase.phase === 'PUSH';
   const cycleNum = phase.cyclesCompleted + 1;
@@ -253,7 +318,7 @@ function PhoneOnlyLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
       <EmergencyBanner/>
       <ReassessPrompt cyclesCompleted={phase.cyclesCompleted}/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
-        <PatchBanner cpr={cpr} connected={false}/>
+        <PatchBanner cpr={cpr} connected={false} onOpenProfile={onOpenProfile}/>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>
@@ -331,7 +396,7 @@ function useRateFromCount(count: number) {
   return rate;
 }
 
-function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
+function HardwareLayout({ cpr, elapsedMs, onOpenProfile }: { cpr: Cpr; elapsedMs: number; onOpenProfile?: () => void }) {
   const liveDepth = cpr.lastSample ? voltageToDepth(cpr.lastSample.voltage) : 0;
   const liveCount = cpr.lastSample?.count ?? 0;
   const liveRate = useRateFromCount(cpr.lastSample?.count ?? 0);
@@ -364,7 +429,7 @@ function HardwareLayout({ cpr, elapsedMs }: { cpr: Cpr; elapsedMs: number }) {
       <EmergencyBanner/>
       <ReassessPrompt cyclesCompleted={cyclesCompleted}/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
-        <PatchBanner cpr={cpr} connected={true}/>
+        <PatchBanner cpr={cpr} connected={true} onOpenProfile={onOpenProfile}/>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>● CPR · CYCLE {String(cycle).padStart(2, '0')}</div>
