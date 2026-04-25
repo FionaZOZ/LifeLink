@@ -1,0 +1,23 @@
+[project]
+name = "cardiaclink-bus"
+version = "0.2.0"
+description = "Fetch.ai uAgent backend for CardiacLink CPR guidance system - 8 agents with Chat Protocol"
+requires-python = ">=3.11"
+dependencies = [
+    "uagents>=0.12.0,<1.0.0",
+    "uagents-core>=0.1.0,<1.0.0",
+    "anthropic>=0.40.0,<1.0.0",
+    "h3>=3.7.0,<4.0.0",
+    "httpx>=0.27.0,<1.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+]
+
+[project.scripts]
+cardiaclink-bus = "bus.scripts.run_all:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["bus"]

@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ensureBeatAudioUnlocked, playCompressionTick } from '@/lib/compressionBeatSound';
+// PHASE 1: product-level UI imports
+import { Call911Banner } from '@/components/Call911Banner';
+import { EmergencyEtaBadge } from '@/components/EmergencyEtaBadge';
+import { NearbyAedMap } from '@/components/NearbyAedMap';
+import { useEmergencyLocation } from '@/lib/useEmergencyLocation';
 
 const IMG_HANDS_POSITION = '/cpr/hands-position.png';
 const IMG_HANDS_POSING = '/cpr/hands-posing.png';
@@ -133,6 +138,12 @@ export default function CPRGuidance() {
   const [beatFlash, setBeatFlash] = useState(0);
   const [inBreathWindow, setInBreathWindow] = useState(false);
   const prevCountInSetRef = useRef<number | null>(null);
+
+  // PHASE 1: GPS capture + AED map expand/collapse state
+  const { location: emergencyLocation, request: requestLocation, retry: retryLocation } = useEmergencyLocation();
+  const [aedMapExpanded, setAedMapExpanded] = useState(false);
+  const emergencyLat = emergencyLocation.status === 'granted' ? emergencyLocation.lat : 34.0727;
+  const emergencyLon = emergencyLocation.status === 'granted' ? emergencyLocation.lon : -118.4421;
 
   const handleEndEmergency = useCallback(() => {
     router.push('/emergency/complete');
@@ -275,6 +286,8 @@ export default function CPRGuidance() {
           </div>
         </div>
       </header>
+      {/* PHASE 1: persistent 911 dial bar — every step except consent */}
+      {step !== 'consent' && <Call911Banner />}
 
       {/* Main Content */}
       <div
@@ -324,6 +337,37 @@ export default function CPRGuidance() {
                 This will guide you through checking responsiveness, breathing, and performing chest
                 compressions with audio feedback.
               </p>
+              {/* PHASE 1: GPS capture block */}
+              <div style={{ marginBottom: '1rem', padding: '0.85rem', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.35rem', color: '#e8f1ff' }}>Share location for AED finder</div>
+                <p style={{ margin: '0 0 0.65rem', color: '#7c8fa8', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                  We&apos;ll use your location to find the closest defibrillators. Skip if you can&apos;t share.
+                </p>
+                {emergencyLocation.status === 'idle' && (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button type="button" onClick={requestLocation} style={{ flex: 1, height: '48px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '9999px', color: '#e8f1ff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Use my location
+                    </button>
+                    <button type="button" style={{ flex: '0 0 auto', height: '48px', background: 'transparent', border: 'none', color: '#7c8fa8', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit', padding: '0 0.75rem' }}>
+                      Skip
+                    </button>
+                  </div>
+                )}
+                {emergencyLocation.status === 'requesting' && (
+                  <div style={{ fontSize: '0.8rem', color: '#7c8fa8' }}>Locating...</div>
+                )}
+                {emergencyLocation.status === 'granted' && (
+                  <div style={{ fontSize: '0.8rem', color: '#6BCB77' }}>Location captured (within {emergencyLocation.accuracyMeters}m)</div>
+                )}
+                {(emergencyLocation.status === 'denied' || emergencyLocation.status === 'unavailable') && (
+                  <button type="button" onClick={retryLocation} style={{ fontSize: '0.8rem', color: '#FF8A5C', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                    Using UCLA campus as default — tap to retry
+                  </button>
+                )}
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.65rem', color: '#7c8fa8', lineHeight: 1.35 }}>
+                  Your location is used only to find nearby AEDs. It is not sent to any server outside the emergency response system.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={handleAllowVoice}
@@ -521,6 +565,12 @@ export default function CPRGuidance() {
                 alt="Where to place hands for CPR: center of the chest"
               />
             </div>
+            {/* PHASE 1: expanded AED map on hand-placement screen */}
+            <NearbyAedMap
+              emergencyLat={emergencyLat}
+              emergencyLon={emergencyLon}
+              variant="expanded"
+            />
             <button
               type="button"
               onClick={() => setStep('handPosing')}
@@ -641,6 +691,19 @@ export default function CPRGuidance() {
             >
               {inBreathWindow ? '30:2 — short breath pause' : 'Compressions — follow the beat'}
             </h2>
+            {/* PHASE 1: ETA badge + collapsed AED map on compressions screen */}
+            <EmergencyEtaBadge
+              emsEtaSeconds={348}
+              droneEtaSeconds={150}
+              hospital={{ name: 'UCLA Ronald Reagan' }}
+              volunteersNotified={3}
+            />
+            <NearbyAedMap
+              emergencyLat={emergencyLat}
+              emergencyLon={emergencyLon}
+              variant={aedMapExpanded ? 'expanded' : 'collapsed'}
+              onToggleVariant={() => setAedMapExpanded((v) => !v)}
+            />
             <ul
               style={{
                 margin: '0 0 1rem',

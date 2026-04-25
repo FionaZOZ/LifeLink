@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Heart } from 'lucide-react';
+import { Heart, Monitor } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -14,9 +14,13 @@ export default function Home() {
           <Heart className="h-8 w-8 text-red-600" fill="currentColor" />
           <h1 className="text-2xl font-bold text-gray-900">CardiacLink</h1>
         </div>
-        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-          <span className="text-sm font-medium text-gray-700">U</span>
-        </div>
+        <button
+          onClick={() => router.push('/demo')}
+          className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors"
+        >
+          <Monitor className="h-4 w-4" />
+          Demo View
+        </button>
       </header>
 
       {/* Main Content */}
@@ -58,6 +62,16 @@ export default function Home() {
               </svg>
             </div>
             <span className="text-sm text-gray-700">Settings</span>
+          </div>
+
+          <div
+            onClick={() => router.push('/demo')}
+            className="flex flex-col items-center gap-2 p-4 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            <div className="w-12 h-12 bg-zinc-900 rounded-full flex items-center justify-center">
+              <Monitor className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-sm text-gray-700">Agent Demo</span>
           </div>
         </div>
       </main>
