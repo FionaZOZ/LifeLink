@@ -197,6 +197,7 @@ export function AedGuideModal({
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
+        animation: 'll-backdrop-fade-in 220ms ease-out',
       }}
     >
       <div
@@ -211,6 +212,8 @@ export function AedGuideModal({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          animation: 'll-sheet-slide-up 320ms cubic-bezier(0.32, 0.72, 0.24, 1)',
+          willChange: 'transform',
         }}
       >
         {/* Drag handle */}
@@ -382,6 +385,7 @@ export function AmbulanceSummaryModal({
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
+        animation: 'll-backdrop-fade-in 220ms ease-out',
       }}
     >
       <div
@@ -396,6 +400,8 @@ export function AmbulanceSummaryModal({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          animation: 'll-sheet-slide-up 320ms cubic-bezier(0.32, 0.72, 0.24, 1)',
+          willChange: 'transform',
         }}
       >
         {/* Drag handle */}
