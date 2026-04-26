@@ -19,7 +19,11 @@ let state: CallState = {
 };
 const listeners = new Set<() => void>();
 
-function emit() { for (const l of listeners) l(); }
+function emit() {
+  listeners.forEach((l) => {
+    l();
+  });
+}
 
 export function getCallState(): CallState { return state; }
 

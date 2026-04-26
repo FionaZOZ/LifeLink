@@ -5,86 +5,86 @@ import { X, FONT } from './tokens';
 import { Icon } from './Icon';
 import { useHelperFlow } from './helperFlow';
 
-/**
- * CPR top toolbar — three interactive pills:
- *  - BEAT ON / OFF: toggles the visual metronome cue on the button itself.
- *    Off state mutes the red pulse-ring + dims the volume icon.
- *  - HEY LIFELINK: tap to simulate a voice prompt — pill flashes white with
- *    a "LISTENING…" mic-pulse for ~1.6s, then returns to idle.
- *  - JOIN CALL / ON CALL: tap to enter / leave the helper group call. ON
- *    state turns the count badge into a "MUTE" indicator and switches the
- *    icon to mic so the user can drop voice on the existing channel.
- */
-export function CPRToolbar({ defaultMetroOn = true, defaultInCall = false, helpersInCall = 2 }: {
-  defaultMetroOn?: boolean;
-  defaultInCall?: boolean;
+/** CPR toolbar — BEAT toggle (metronome ticks driven on assist page) + helper JOIN CALL. */
+export function CPRToolbar({
+  beatOn,
+  onBeatToggle,
+  helpersInCall = 2,
+  defaultInCall = false,
+  onCallActiveChange,
+}: {
+  beatOn: boolean;
+  onBeatToggle: () => void;
   helpersInCall?: number;
+  defaultInCall?: boolean;
+  onCallActiveChange?: (active: boolean) => void;
 }) {
-  const [metroOn, setMetroOn] = React.useState(defaultMetroOn);
-  const [voiceState, setVoiceState] = React.useState<'idle' | 'listening'>('idle');
   const [inCall, setInCall] = React.useState(defaultInCall);
   const [muted, setMuted] = React.useState(false);
 
-  const onToggleMetro = () => setMetroOn(v => !v);
-  const onTriggerVoice = () => {
-    if (voiceState === 'listening') return;
-    setVoiceState('listening');
-    setTimeout(() => setVoiceState('idle'), 1600);
-  };
+  React.useEffect(() => {
+    onCallActiveChange?.(inCall);
+  }, [inCall, onCallActiveChange]);
+
   const onToggleCall = () => {
-    setInCall(v => !v);
-    if (inCall) setMuted(false);
+    setInCall((v) => {
+      if (v) setMuted(false);
+      return !v;
+    });
   };
   const onToggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setMuted(v => !v);
+    setMuted((v) => !v);
   };
 
-  const listening = voiceState === 'listening';
-
   return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
-      {/* BEAT toggle */}
+    <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', flexWrap: 'wrap' }}>
       <button
-        onClick={onToggleMetro}
-        aria-pressed={metroOn}
+        type="button"
+        onClick={onBeatToggle}
+        aria-pressed={beatOn}
         style={{
-          all: 'unset', cursor: 'pointer',
-          position: 'relative', display: 'flex', alignItems: 'center', gap: 6,
-          padding: '6px 10px', borderRadius: 999,
-          background: metroOn ? `${X.RED}22` : 'rgba(255,255,255,0.06)',
-          border: `1px solid ${metroOn ? X.RED : 'rgba(255,255,255,0.12)'}`,
+          all: 'unset',
+          cursor: 'pointer',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '6px 10px',
+          borderRadius: 999,
+          background: beatOn ? `${X.RED}22` : 'rgba(255,255,255,0.06)',
+          border: `1px solid ${beatOn ? X.RED : 'rgba(255,255,255,0.12)'}`,
         }}
       >
-        {metroOn && <span style={{ position: 'absolute', inset: -3, borderRadius: 999, border: `1px solid ${X.RED}55`, animation: 'll-pulse-ring 1.2s ease-out infinite', pointerEvents: 'none' }}/>}
-        <Icon name="volume" size={14} color={metroOn ? '#fff' : 'rgba(255,255,255,0.55)'} stroke={2.2}/>
-        <span style={{ fontSize: 9.5, fontFamily: FONT.mono, letterSpacing: 1, fontWeight: 700, color: metroOn ? '#fff' : 'rgba(255,255,255,0.55)' }}>
-          BEAT {metroOn ? 'ON' : 'OFF'}
-        </span>
-      </button>
-
-      {/* HEY LIFELINK voice trigger */}
-      <button
-        onClick={onTriggerVoice}
-        aria-pressed={listening}
-        style={{
-          all: 'unset', cursor: 'pointer',
-          position: 'relative', display: 'flex', alignItems: 'center', gap: 6,
-          padding: '6px 10px', borderRadius: 999,
-          background: listening ? '#fff' : 'rgba(255,255,255,0.10)',
-          border: `1px solid ${listening ? '#fff' : 'rgba(255,255,255,0.22)'}`,
-          transition: 'background 160ms linear, border-color 160ms linear',
-        }}
-      >
-        {listening && <span style={{ position: 'absolute', inset: -3, borderRadius: 999, border: '1px solid rgba(255,255,255,0.55)', animation: 'll-pulse-ring 0.9s ease-out infinite', pointerEvents: 'none' }}/>}
-        <Icon name="mic" size={14} color={listening ? X.INK : '#fff'} stroke={2.2}/>
-        <span style={{ fontSize: 9.5, fontFamily: FONT.mono, letterSpacing: 1, fontWeight: 700, color: listening ? X.INK : '#fff' }}>
-          {listening ? 'LISTENING…' : 'HEY LIFELINK'}
+        {beatOn && (
+          <span
+            style={{
+              position: 'absolute',
+              inset: -3,
+              borderRadius: 999,
+              border: `1px solid ${X.RED}55`,
+              animation: 'll-pulse-ring 1.2s ease-out infinite',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+        <Icon name="volume" size={14} color={beatOn ? '#fff' : 'rgba(255,255,255,0.55)'} stroke={2.2} />
+        <span
+          style={{
+            fontSize: 9.5,
+            fontFamily: FONT.mono,
+            letterSpacing: 1,
+            fontWeight: 700,
+            color: beatOn ? '#fff' : 'rgba(255,255,255,0.55)',
+          }}
+        >
+          BEAT {beatOn ? 'ON' : 'OFF'}
         </span>
       </button>
 
       {/* JOIN CALL / ON CALL */}
       <button
+        type="button"
         onClick={onToggleCall}
         aria-pressed={inCall}
         style={{

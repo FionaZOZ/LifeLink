@@ -3,15 +3,44 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
+import {
+  AmbulanceSummaryModal,
+  readStoredAmbulanceReport,
+  buildMinimalAmbulanceSnapshot,
+  type CprAmbulanceSnapshot,
+} from '@/components/lifelink/CprSessionArrivals';
 import { X, FONT } from '@/components/lifelink/tokens';
+import { clearSosTimer, getSosElapsedNow, SOS_COMPLETE_ELAPSED_KEY } from '@/components/lifelink/sosTimer';
 
 export default function RecoveryPage() {
   const router = useRouter();
+  const [ambulanceOpen, setAmbulanceOpen] = React.useState(false);
+  const [ambulanceSnapshot, setAmbulanceSnapshot] = React.useState<CprAmbulanceSnapshot | null>(null);
+
+  const openAmbulanceReport = React.useCallback(() => {
+    const stored = readStoredAmbulanceReport();
+    setAmbulanceSnapshot(stored ?? buildMinimalAmbulanceSnapshot(getSosElapsedNow()));
+    setAmbulanceOpen(true);
+  }, []);
+
+  const endEmergencyFromReport = React.useCallback(() => {
+    const sec = getSosElapsedNow();
+    try {
+      window.sessionStorage.setItem(SOS_COMPLETE_ELAPSED_KEY, String(Math.max(1, sec)));
+    } catch {
+      /* ignore */
+    }
+    setAmbulanceOpen(false);
+    setAmbulanceSnapshot(null);
+    clearSosTimer();
+    router.push('/sos/complete');
+  }, [router]);
+
   return (
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>
 
-      <div style={{ padding: '70px 22px 0' }}>
+      <div style={{ padding: '70px 22px 140px' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.GREEN, letterSpacing: 1.4, fontWeight: 700 }}>● BREATHING NORMALLY</div>
         <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05 }}>
           Roll them onto<br/>their side.
@@ -54,10 +83,54 @@ export default function RecoveryPage() {
         </div>
       </div>
 
-      <div style={{ position: 'absolute', left: 22, right: 22, bottom: 38, display: 'flex', gap: 10 }}>
-        <button onClick={() => router.push('/sos/breathing')} style={{ all: 'unset', cursor: 'pointer', padding: '14px 18px', border: `1px solid ${X.LINE}`, color: X.INK, borderRadius: 14, fontWeight: 700, fontSize: 13 }}>Re-check</button>
-        <button onClick={() => router.push('/sos/map')} style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 16, background: X.INK, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 700, letterSpacing: 0.4 }}>Stay &amp; monitor (3 min)</button>
+      <div style={{ position: 'absolute', left: 22, right: 22, bottom: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            type="button"
+            onClick={() => router.push('/sos/breathing')}
+            style={{ all: 'unset', cursor: 'pointer', padding: '14px 18px', border: `1px solid ${X.LINE}`, color: X.INK, borderRadius: 14, fontWeight: 700, fontSize: 13 }}
+          >
+            Re-check
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/sos/map')}
+            style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 16, background: X.INK, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 700, letterSpacing: 0.4 }}
+          >
+            Stay &amp; monitor
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={openAmbulanceReport}
+          style={{
+            all: 'unset',
+            cursor: 'pointer',
+            padding: 14,
+            textAlign: 'center',
+            borderRadius: 14,
+            fontWeight: 800,
+            fontSize: 14,
+            letterSpacing: 0.2,
+            background: 'rgba(44,102,232,0.12)',
+            border: `1.5px solid ${X.BLUE}`,
+            color: X.BLUE,
+          }}
+        >
+          Ambulance arrived
+        </button>
       </div>
+
+      <AmbulanceSummaryModal
+        open={ambulanceOpen}
+        snapshot={ambulanceSnapshot}
+        onClose={() => {
+          setAmbulanceOpen(false);
+          setAmbulanceSnapshot(null);
+        }}
+        onEndEmergency={endEmergencyFromReport}
+        dismissLabel="Stay & monitor"
+      />
     </Screen>
   );
 }

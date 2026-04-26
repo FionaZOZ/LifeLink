@@ -4,9 +4,13 @@ import { useRouter } from 'next/navigation';
 import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
+import { isSosFlowActive } from '@/components/lifelink/sosTimer';
+import { SOS_BREATHE_LINES } from '@/lib/voice/sosNarrationScripts';
+import { useElevenLabsScriptedNarration } from '@/lib/voice/useElevenLabsScriptedNarration';
 
 export default function BreathingPage() {
   const router = useRouter();
+  useElevenLabsScriptedNarration('sos-breathe', SOS_BREATHE_LINES, isSosFlowActive());
   return (
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>
