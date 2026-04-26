@@ -1,87 +1,66 @@
-# CardiacLink Quick Start 🚀
+# LifeLink Quick Start 🚀
 
-## 30-Second Setup
+## Frontend
 
 ```bash
-# Terminal 1: Frontend
-cd /Users/emilysun/Downloads/cardiaclink
+npm install
 npm run dev
+```
 
-# Terminal 2: Backend
-cd /Users/emilysun/Downloads/cardiaclink/backend
+Open **http://localhost:3000**.
+
+## Optional FastAPI backend
+
+Required for backend-driven emergency notifications and patient-profile handoff from the Arduino/Web Serial flow.
+
+```bash
+cd backend
 pip install -r requirements.txt
 python main.py
 ```
 
-Open **http://localhost:3000**
+Backend URL: **http://localhost:8000**
 
-## The Flow (5 minutes)
+## Optional local Fetch.ai bus
 
-1. **Click red EMERGENCY button** → Location screen
-2. **Confirm location** → Backend sends Twilio calls + SMS
-3. **View dispatch** → See volunteer notifications
-4. **Start CPR** → 110 BPM metronome (THE HERO SCREEN)
-5. **After 2 min** → Assessment → Continue or Complete
+Required for local multi-agent telemetry testing.
 
-## Key Routes
+```bash
+cd bus
+pip install -r requirements.txt
+python scripts/run_all.py
+```
 
-- `/` - Home with emergency button
-- `/emergency/location` - GPS confirmation
-- `/emergency/dispatch` - Notifications status
-- `/emergency/cpr` - **THE METRONOME** 🫀
-- `/emergency/cpr-hardware` - With sensor feedback
-- `/emergency/assessment` - Check patient
-- `/emergency/complete` - Mission summary
-- `/volunteer/map` - Volunteer view
+Event server URL: **http://localhost:8010**
 
-## API Endpoints
+## Current demo flow
 
-**Backend**: http://localhost:8000
+1. Open `/`.
+2. Hold the emergency button to enter `/sos`.
+3. Follow dispatcher status through `/sos/dispatch/...`.
+4. Open `/sos/map` to view responders and AED routing.
+5. Continue to `/sos/cpr/tutorial` or `/sos/cpr/assist` for CPR guidance.
+6. Use `/patient/hardware` to test Arduino / Apple Watch hardware state.
 
-- `POST /api/emergency/trigger` - Trigger emergency
-- `GET /api/emergency/status` - Get status
-- `POST /api/emergency/reset` - Reset demo
-- `GET /docs` - API documentation
+## Key routes
+
+- `/` — home
+- `/profile` — role/profile setup
+- `/sos` — emergency flow
+- `/sos/map` — responder map
+- `/sos/cpr/tutorial` — CPR tutorial
+- `/sos/cpr/assist` — CPR assist
+- `/patient/hardware` — hardware connection screen
+- `/dev/dashboard` — developer health dashboard
 
 ## Environment
 
-**Backend** (`backend/.env`):
-```
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_PHONE_NUMBER=your_twilio_phone_number
+```bash
+cp .env.local.example .env.local
 ```
 
-## Testing Notifications
+Fill only the services you plan to demo: Mapbox, MongoDB, ElevenLabs, Agentverse, FastAPI backend, and/or Fetch.ai bus.
 
-The backend makes **real Twilio calls** to:
-- Volunteer A: +19495190927 (call)
-- Volunteer B: +19493440799 (SMS)
-- Volunteer C: +19492223333 (call)
+More notes: `README.md` and `docs/CLEANUP_REPORT.md`.
 
-Check backend console for call status!
-
-## Troubleshooting
-
-### No metronome beep?
-Click anywhere on page first (browser audio permission)
-
-### Backend errors?
-Check Twilio credentials in `backend/.env`
-
-### CORS issues?
-Ensure backend is on port 8000, frontend on 3000
-
-## Demo Tips
-
-1. ✅ Run backend FIRST
-2. ✅ Use desktop browser (full width design)
-3. ✅ Allow audio permissions
-4. ✅ Watch backend logs for Twilio status
-5. ✅ Full flow takes ~5 minutes
-
----
-
-**Read More**: `GETTING_STARTED.md` | `BUILD_SUMMARY.md`
-
-🫀 **Every second counts**
+🫀 **Every second counts.**

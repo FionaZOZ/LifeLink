@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LifeLink
 
-## Getting Started
+LifeLink is a cardiac-emergency response demo that connects a patient/bystander flow, nearby helper routing, CPR guidance, Arduino pressure-sensor feedback, a FastAPI emergency backend, and Fetch.ai/Agentverse multi-agent orchestration.
 
-First, run the development server:
+The active app is a Next.js mobile-style interface. Supporting runtimes live in separate folders so the repo can be run as a frontend-only demo, a frontend + FastAPI demo, or a full agent-orchestration demo.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Active project layout
+
+```text
+app/                    Next.js App Router pages and API routes
+components/lifelink/    Current mobile UI components used by the active app
+components/ui/          Shared UI primitives used by /dev/dashboard
+lib/                    Current app hooks, CPR logic, voice helpers, Mongo client, scenarios
+backend/                FastAPI emergency backend
+bus/                    Local Fetch.ai/uAgents event bus and specialist agents
+agentverse-deploy/      4-agent hosted Agentverse deployment files
+arduino/                RP-S40-ST pressure-sensor sketch
+public/                 Static CPR guide images
+scripts/                Seed/test/data scripts
+supabase/               Database migration
+docs/                   Project notes, reports, and archived prompts
+archive/                Legacy code kept for reference, excluded from active TypeScript builds
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quick start
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open `http://localhost:3000`.
 
-## Learn More
+For CPR profile handoff / backend testing:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+For the local Fetch.ai event bus:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+cd bus
+pip install -r requirements.txt
+python scripts/run_all.py
+```
 
-## Deploy on Vercel
+## Main routes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `/` — patient/guest/volunteer home
+- `/profile` — role and patient profile setup
+- `/sos` — emergency start flow
+- `/sos/dispatch/conscious` and `/sos/dispatch/unconscious` — dispatcher flows
+- `/sos/map` — live responder map
+- `/sos/cpr/tutorial` — CPR tutorial
+- `/sos/cpr/assist` — CPR assist with sensor/voice support
+- `/patient/hardware` — Apple Watch / Arduino hardware setup
+- `/dev/dashboard` — service health and developer dashboard
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Environment
+
+Copy `.env.local.example` to `.env.local` and fill only the services you need. The frontend works in demo mode with missing optional service keys, but Mapbox, MongoDB, ElevenLabs, Agentverse, and the FastAPI backend each require their corresponding environment variables for full functionality.
+
+## Cleanup notes
+
+See `docs/CLEANUP_REPORT.md` for what was deleted, archived, and left at the repo root.
