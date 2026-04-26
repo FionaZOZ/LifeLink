@@ -97,14 +97,6 @@ export function HelperToast() {
           <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 0.4, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>{event.sub}</div>
         </div>
         <span style={{ fontSize: 9, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.GREEN, fontWeight: 800 }}>EN ROUTE</span>
-
-        {/* iOS-style drag handle */}
-        <div style={{
-          position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)',
-          width: 36, height: 4, borderRadius: 2,
-          background: 'rgba(255,255,255,0.25)',
-          pointerEvents: 'none',
-        }}/>
       </div>
     </div>
   );
