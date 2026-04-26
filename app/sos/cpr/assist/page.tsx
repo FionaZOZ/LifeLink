@@ -4,7 +4,7 @@ import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { CPRToolbar, CPRMiniLive } from '@/components/lifelink/CPRShared';
 import { PatientProfileSheet } from '@/components/lifelink/PatientProfileSheet';
-import { ReassessPrompt } from '@/components/lifelink/ReassessPrompt';
+import { BreathingReassessButton } from '@/components/lifelink/BreathingReassessButton';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { useSerialCPR, type SerialPatientProfile } from '@/lib/cpr/useSerialCPR';
 
@@ -362,7 +362,6 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
   return (
     <Screen bg={X.DARK} padTop={0}>
       <EmergencyBanner/>
-      <ReassessPrompt cyclesCompleted={phase.cyclesCompleted}/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
         <PatchBanner cpr={cpr} connected={false} effectiveProfile={effectiveProfile} isFallbackProfile={isFallbackProfile} onOpenProfile={onOpenProfile}/>
 
@@ -404,6 +403,8 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
           <div style={{ flex: 1, fontSize: 12, fontWeight: 700 }}>{cue}</div>
           <div style={{ fontSize: 9, fontFamily: FONT.mono, opacity: 0.85 }}>{fmtMmSs(Math.floor(elapsedMs / 1000))}</div>
         </div>
+
+        <BreathingReassessButton cyclesCompleted={phase.cyclesCompleted}/>
 
         {cpr.error && (
           <div style={{ marginTop: 8, padding: 8, borderRadius: 8, background: 'rgba(225,29,46,0.18)', border: '1px solid rgba(225,29,46,0.4)', fontSize: 11, color: '#fff', fontFamily: FONT.mono }}>
@@ -473,7 +474,6 @@ function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, o
   return (
     <Screen bg={X.DARK} padTop={0}>
       <EmergencyBanner/>
-      <ReassessPrompt cyclesCompleted={cyclesCompleted}/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
         <PatchBanner cpr={cpr} connected={true} effectiveProfile={effectiveProfile} isFallbackProfile={isFallbackProfile} onOpenProfile={onOpenProfile}/>
 
@@ -546,6 +546,8 @@ function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, o
           <div style={{ flex: 1, fontSize: 12, fontWeight: 700 }}>{cueText}</div>
           <div style={{ fontSize: 9, fontFamily: FONT.mono, opacity: 0.85 }}>{fmtMmSs(Math.floor(elapsedMs / 1000))}</div>
         </div>
+
+        <BreathingReassessButton cyclesCompleted={cyclesCompleted}/>
 
         {cpr.error && (
           <div style={{ marginTop: 8, padding: 8, borderRadius: 8, background: 'rgba(225,29,46,0.18)', border: '1px solid rgba(225,29,46,0.4)', fontSize: 11, color: '#fff', fontFamily: FONT.mono }}>
