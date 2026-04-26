@@ -410,6 +410,7 @@ const DICT: Record<string, Record<Lang, string>> = {
   'sos.rec.statusLabel':   { en: '● BREATHING NORMALLY', zh: '● 呼吸正常' },
   'sos.rec.title':         { en: 'Roll them onto\ntheir side.', zh: '将他们\n转向侧面。' },
   'sos.rec.body':          { en: 'This keeps the airway clear while help arrives.', zh: '在帮助到达前保持气道畅通。' },
+  'sos.rec.imageAlt':      { en: 'Illustration: recovery position — person lying on their side', zh: '图示：恢复体位——患者侧卧' },
   'sos.rec.step1':         { en: 'Bend the arm closest to you up by their head.', zh: '将靠近你的手臂弯起到他们头边。' },
   'sos.rec.step2':         { en: 'Pull the far knee up so the foot is flat.', zh: '将远侧的膝盖抬起，脚掌平放。' },
   'sos.rec.step3':         { en: 'Roll them toward you, head on their bent arm.', zh: '将他们朝你翻过来，头枕在弯曲的手臂上。' },

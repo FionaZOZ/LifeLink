@@ -9,7 +9,7 @@ import { useDemoRole, isVolunteer, isPatient } from '@/components/lifelink/demoR
 import { useHoldToFire } from '@/components/lifelink/useHoldToFire';
 import { clearSosTimer } from '@/components/lifelink/sosTimer';
 import { AppleWatchCard } from '@/components/lifelink/AppleWatchCard';
-import { useT } from '@/components/lifelink/i18n';
+import { useT, useLang, type Lang } from '@/components/lifelink/i18n';
 
 const HOLD_MS = 1500;
 // Inner button is 240px, outer ring sits at 280px → scale factor to fill is 280/240 ≈ 1.167
@@ -24,15 +24,53 @@ export default function HomePage() {
   return <HomeGuest/>;
 }
 
+function HomeGuestLangToggle() {
+  const [lang, setLang] = useLang();
+  const pill = (id: Lang, label: string) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => setLang(id)}
+      aria-pressed={lang === id}
+      aria-label={id === 'en' ? 'English' : '简体中文'}
+      style={{
+        margin: 0,
+        padding: '5px 10px',
+        borderRadius: 8,
+        fontSize: 11,
+        fontWeight: 700,
+        fontFamily: FONT.mono,
+        letterSpacing: 0.5,
+        cursor: 'pointer',
+        border: `1px solid ${lang === id ? X.RED : X.LINE}`,
+        background: lang === id ? X.RED : '#fff',
+        color: lang === id ? '#fff' : X.INK2,
+        lineHeight: 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div style={{ display: 'flex', gap: 5, alignItems: 'center' }} role="group" aria-label="Language">
+      {pill('en', 'EN')}
+      {pill('zh', '中文')}
+    </div>
+  );
+}
+
 function HomeGuest() {
   const router = useRouter();
   const { t } = useT();
   const { isHolding, handlers } = useHoldToFire(HOLD_MS, () => router.push('/sos'));
   return (
     <Screen>
-      <div style={{ padding: '6px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4, fontWeight: 700 }}>{t('home.guest.brand')}</div>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK3, letterSpacing: 0.6 }}>{t('home.guest.role')}</div>
+      <div style={{ padding: '6px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4, fontWeight: 700, paddingTop: 2 }}>{t('home.guest.brand')}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+          <HomeGuestLangToggle />
+          <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK3, letterSpacing: 0.6 }}>{t('home.guest.role')}</div>
+        </div>
       </div>
 
       <div style={{ position: 'absolute', left: 0, right: 0, top: 90, bottom: 240, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>

@@ -70,18 +70,13 @@ export default function RecoveryPage() {
         <div style={{ marginTop: 6, fontSize: 13, color: X.INK2 }}>{t('sos.rec.body')}</div>
 
         <div style={{ marginTop: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, padding: 14 }}>
-          <div style={{ background: X.BG, borderRadius: 12, padding: 12 }}>
-            <svg viewBox="0 0 260 110" width="100%" height="100">
-              <ellipse cx="130" cy="92" rx="120" ry="6" fill={X.LINE2}/>
-              <path d="M 60 78 Q 50 68 60 60 Q 78 56 96 60 Q 130 64 168 56 Q 192 50 200 60 Q 210 72 196 80 Q 158 92 110 88 Z" fill="#EFEDE6" stroke={X.LINE} strokeWidth="1.5"/>
-              <circle cx="56" cy="64" r="11" fill="#fff" stroke={X.INK} strokeWidth="1.6"/>
-              <path d="M 110 62 Q 130 50 138 70" stroke={X.INK} strokeWidth="1.6" fill="none" strokeLinecap="round"/>
-              <path d="M 178 64 Q 210 70 198 86" stroke={X.INK} strokeWidth="1.6" fill="none" strokeLinecap="round"/>
-              <g stroke={X.GREEN} strokeWidth="1.6" fill="none" strokeLinecap="round">
-                <path d="M 56 48 q 0 -8 4 -12"/>
-                <path d="M 50 50 q -2 -8 0 -14"/>
-              </g>
-            </svg>
+          <div style={{ background: X.BG, borderRadius: 12, padding: 8, overflow: 'hidden' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/cpr/recovery_position.png"
+              alt={t('sos.rec.imageAlt')}
+              style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 8 }}
+            />
           </div>
 
           <div style={{ marginTop: 10 }}>
