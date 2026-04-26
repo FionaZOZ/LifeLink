@@ -5,14 +5,15 @@ import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { isSosFlowActive } from '@/components/lifelink/sosTimer';
-import { SOS_BREATHE_LINES } from '@/lib/voice/sosNarrationScripts';
+import { getSosBreatheVoiceLines } from '@/lib/voice/sosNarrationScripts';
 import { useElevenLabsScriptedNarration } from '@/lib/voice/useElevenLabsScriptedNarration';
 import { useT } from '@/components/lifelink/i18n';
 
 export default function BreathingPage() {
   const router = useRouter();
-  const { t } = useT();
-  useElevenLabsScriptedNarration('sos-breathe', SOS_BREATHE_LINES, isSosFlowActive());
+  const { t, lang } = useT();
+  const breatheVoiceLines = React.useMemo(() => getSosBreatheVoiceLines(lang), [lang]);
+  useElevenLabsScriptedNarration('sos-breathe', breatheVoiceLines, isSosFlowActive(), lang);
   return (
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>

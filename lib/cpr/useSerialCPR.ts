@@ -587,17 +587,41 @@ export function useSerialCPR() {
         portRef.current = port;
         addLog('info', opts.silent ? 'Reusing previously-granted serial port' : 'Serial port selected', describePort(port));
 
-        try {
+        const openPort = async () => {
           await port.open({ baudRate: 115200 });
           portIsOpenRef.current = true;
           addLog('info', 'Serial port opened', 'baudRate=115200');
+        };
+
+        try {
+          await openPort();
         } catch (error) {
           const message = formatError(error, 'Failed to open serial port.');
-          if (message.toLowerCase().includes('already open')) {
+          const alreadyOpen =
+            message.toLowerCase().includes('already open') ||
+            (error instanceof DOMException && error.name === 'InvalidStateError');
+          if (alreadyOpen) {
             portIsOpenRef.current = true;
             addLog('warn', 'Serial port was already open', 'Continuing with the existing open port.');
           } else {
-            throw error;
+            // Stale handle from HMR / remount: streams exist but our refs were cleared.
+            const hasStreams = port.readable != null || port.writable != null;
+            if (hasStreams) {
+              try {
+                await port.close();
+                addLog('info', 'Closed stale port handle before retrying open');
+              } catch (closeErr) {
+                addLog('warn', 'Stale port close failed', formatError(closeErr, 'Unknown'));
+              }
+              portIsOpenRef.current = false;
+              try {
+                await openPort();
+              } catch (e2) {
+                throw e2;
+              }
+            } else {
+              throw error;
+            }
           }
         }
 
@@ -696,11 +720,9 @@ export function useSerialCPR() {
     };
   }, [connect, disconnect]);
 
-  useEffect(() => {
-    return () => {
-      void disconnect();
-    };
-  }, [disconnect]);
+  // Serial teardown runs from `SosSerialCprProvider` (layout) with a short debounce
+  // so React 18 Strict Mode’s mount→unmount→remount does not close the port between
+  // the two mounts and break reconnect.
 
   // Public profile re-request — useful when the auto-PROFILE write right
   // after port.open() races against the Arduino's setup() Serial-attach wait

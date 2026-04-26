@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import type { Lang } from '@/components/lifelink/i18n';
 import { playElevenLabsLine, stopElevenLabsPlayback } from '@/lib/voice/playElevenLabsLine';
 
 type ScriptLines = readonly string[];
@@ -11,8 +12,9 @@ let narrationEpoch = 0;
 /**
  * When `arm` is true (e.g. active SOS session), checks TTS config once then plays lines in order.
  * Stops previous clips before starting; invalidates in-flight work so lines never overlap.
+ * `lang` selects ElevenLabs model + should match the language of each `lines` string.
  */
-export function useElevenLabsScriptedNarration(scriptId: string, lines: ScriptLines, arm: boolean) {
+export function useElevenLabsScriptedNarration(scriptId: string, lines: ScriptLines, arm: boolean, lang: Lang = 'en') {
   const scriptIdRef = useRef(scriptId);
   scriptIdRef.current = scriptId;
 
@@ -36,7 +38,7 @@ export function useElevenLabsScriptedNarration(scriptId: string, lines: ScriptLi
 
         for (const line of lines) {
           if (ac.signal.aborted || epoch !== narrationEpoch) break;
-          const ok = await playElevenLabsLine(line, { signal: ac.signal });
+          const ok = await playElevenLabsLine(line, { signal: ac.signal, lang });
           if (!ok || epoch !== narrationEpoch) break;
         }
       } catch {
@@ -49,5 +51,5 @@ export function useElevenLabsScriptedNarration(scriptId: string, lines: ScriptLi
       narrationEpoch += 1;
       stopElevenLabsPlayback();
     };
-  }, [arm, lines, scriptId]);
+  }, [arm, lines, scriptId, lang]);
 }

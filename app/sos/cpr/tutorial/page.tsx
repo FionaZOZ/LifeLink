@@ -9,7 +9,7 @@ import { CPR_PROFILE_SHEET_ACKED_KEY, isSosFlowActive } from '@/components/lifel
 import { useSosSerialCpr } from '@/lib/cpr/SosSerialCprContext';
 import { useEffectiveProfile, useProfileRetry } from '@/lib/cpr/patchSerialSession';
 import { usePatchProfileSheet } from '@/lib/cpr/usePatchProfileSheet';
-import { SOS_CPR_TUTORIAL_LINES } from '@/lib/voice/sosNarrationScripts';
+import { getSosCprTutorialVoiceLines } from '@/lib/voice/sosNarrationScripts';
 import { useElevenLabsScriptedNarration } from '@/lib/voice/useElevenLabsScriptedNarration';
 import { useT } from '@/components/lifelink/i18n';
 
@@ -30,7 +30,7 @@ function PhotoCard({ label, sub, src, alt }: { label: string; sub: string; src: 
 
 export default function CPRTutorialPage() {
   const router = useRouter();
-  const { t } = useT();
+  const { t, lang } = useT();
   const cpr = useSosSerialCpr();
   const connected = cpr.isConnected && cpr.isReceiving;
   const effective = useEffectiveProfile(cpr);
@@ -47,7 +47,8 @@ export default function CPRTutorialPage() {
     dismissProfileSheet();
   }, [dismissProfileSheet]);
   useProfileRetry(cpr);
-  useElevenLabsScriptedNarration('sos-cpr-tutorial', SOS_CPR_TUTORIAL_LINES, isSosFlowActive());
+  const tutorialVoiceLines = React.useMemo(() => getSosCprTutorialVoiceLines(lang), [lang]);
+  useElevenLabsScriptedNarration('sos-cpr-tutorial', tutorialVoiceLines, isSosFlowActive(), lang);
   return (
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>

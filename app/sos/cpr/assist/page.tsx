@@ -187,7 +187,7 @@ function PhaseRingCircle({ phase, size = 220, sessionFrozen = false }: { phase: 
 // ── PAGE: auto-switches between phone-only and hardware-connected layouts ─
 export default function CPRAssistPage() {
   const router = useRouter();
-  const { t } = useT();
+  const { t, lang } = useT();
   const cpr = useSosSerialCpr();
   const connected = cpr.isConnected && cpr.isReceiving;
 
@@ -348,6 +348,7 @@ export default function CPRAssistPage() {
     hardwareBpm: connected ? hardwareBpm : null,
     voiceEnabledByUser: voiceOn,
     voiceMutedForCall: callActive || cprScenePaused || !cprLive,
+    lang,
   });
 
   // Effective patient profile: prefer Arduino-supplied data, fall back to the
@@ -659,7 +660,13 @@ function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, o
       <EmergencyBanner/>
       <div style={{ padding: '70px 18px 120px', color: '#fff' }}>
         <VoiceCoachRow {...voiceCoach}/>
-        <PatchBanner cpr={cpr} connected={true} effectiveProfile={effectiveProfile} isFallbackProfile={isFallbackProfile} onOpenProfile={onOpenProfile}/>
+        <PatchBanner
+          cpr={cpr}
+          connected={cpr.isConnected && cpr.isReceiving}
+          effectiveProfile={effectiveProfile}
+          isFallbackProfile={isFallbackProfile}
+          onOpenProfile={onOpenProfile}
+        />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, opacity: sessionFrozen ? 0.55 : 1 }}>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>{t('cpr.assist.cycleTag', { n: String(cycle).padStart(2, '0') })}</div>

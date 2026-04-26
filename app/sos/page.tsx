@@ -5,19 +5,20 @@ import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { isSosFlowActive, startSosTimer } from '@/components/lifelink/sosTimer';
-import { SOS_RESPOND_LINES } from '@/lib/voice/sosNarrationScripts';
+import { getSosRespondVoiceLines } from '@/lib/voice/sosNarrationScripts';
 import { useElevenLabsScriptedNarration } from '@/lib/voice/useElevenLabsScriptedNarration';
 import { useT } from '@/components/lifelink/i18n';
 
 export default function ResponsivenessPage() {
   const router = useRouter();
-  const { t } = useT();
+  const { t, lang } = useT();
   const [narrationArm, setNarrationArm] = React.useState(false);
+  const respondVoiceLines = React.useMemo(() => getSosRespondVoiceLines(lang), [lang]);
   React.useLayoutEffect(() => {
     startSosTimer();
     setNarrationArm(isSosFlowActive());
   }, []);
-  useElevenLabsScriptedNarration('sos-respond', SOS_RESPOND_LINES, narrationArm);
+  useElevenLabsScriptedNarration('sos-respond', respondVoiceLines, narrationArm, lang);
   return (
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>

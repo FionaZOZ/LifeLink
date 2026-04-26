@@ -5,7 +5,7 @@ import { Screen, TabBar, TopBar } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { useDemoRole, isVolunteer, isPatient, type DemoRole } from '@/components/lifelink/demoRole';
-import { useT, useLang, LANG_OPTIONS } from '@/components/lifelink/i18n';
+import { useT, useLang, LANG_OPTIONS, resetLangToEnglish } from '@/components/lifelink/i18n';
 
 export default function ProfilePage() {
   const [role, setRole] = useDemoRole();
@@ -242,7 +242,7 @@ function ProfileVolunteer({ setRole, patientToo = false }: { setRole: (r: DemoRo
               <button key={i} onClick={() => router.push(row.href!)} style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box' }}>{inner}</button>
             ) : <div key={i}>{inner}</div>;
           })}
-          <button onClick={() => { setRole('guest'); router.push('/profile'); }} style={{ all: 'unset', cursor: 'pointer', padding: 14, display: 'flex', alignItems: 'center', gap: 12, width: '100%', boxSizing: 'border-box' }}>
+          <button onClick={() => { resetLangToEnglish(); setRole('guest'); router.push('/'); }} style={{ all: 'unset', cursor: 'pointer', padding: 14, display: 'flex', alignItems: 'center', gap: 12, width: '100%', boxSizing: 'border-box' }}>
             <div style={{ width: 32, height: 32, borderRadius: 10, background: X.BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="x" size={16} color={X.RED} stroke={2}/>
             </div>
@@ -333,7 +333,7 @@ function ProfilePatient({ setRole }: { setRole: (r: DemoRole) => void }) {
               <button key={i} onClick={() => router.push(row.href!)} style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box' }}>{inner}</button>
             ) : <div key={i}>{inner}</div>;
           })}
-          <button onClick={() => { setRole('guest'); router.push('/profile'); }} style={{ all: 'unset', cursor: 'pointer', padding: 14, display: 'flex', alignItems: 'center', gap: 12, width: '100%', boxSizing: 'border-box' }}>
+          <button onClick={() => { resetLangToEnglish(); setRole('guest'); router.push('/'); }} style={{ all: 'unset', cursor: 'pointer', padding: 14, display: 'flex', alignItems: 'center', gap: 12, width: '100%', boxSizing: 'border-box' }}>
             <div style={{ width: 32, height: 32, borderRadius: 10, background: X.BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="x" size={16} color={X.RED} stroke={2}/>
             </div>

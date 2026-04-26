@@ -48,7 +48,10 @@ export function PatchBanner({
       onOpenProfile();
       return;
     }
-    void (connected ? cpr.disconnect() : cpr.connect());
+    // `connected` can be false while the port is already open (e.g. waiting for the
+    // first sample). A second `connect()` throws from Web Serial — use port state.
+    if (cpr.isConnecting) return;
+    void (cpr.isConnected ? cpr.disconnect() : cpr.connect());
   };
 
   const tone =

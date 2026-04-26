@@ -1,5 +1,7 @@
 'use client';
 
+import type { Lang } from '@/components/lifelink/i18n';
+
 let killToken = 0;
 let activeAudio: HTMLAudioElement | null = null;
 let activeObjectUrl: string | null = null;
@@ -38,6 +40,8 @@ export function stopElevenLabsPlayback() {
 
 type PlayOpts = {
   signal?: AbortSignal;
+  /** Request TTS tuned for Chinese when UI is in zh (server picks multilingual model). */
+  lang?: Lang;
 };
 
 /**
@@ -57,7 +61,7 @@ export async function playElevenLabsLine(text: string, opts?: PlayOpts): Promise
     res = await fetch('/api/voice/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: trimmed }),
+      body: JSON.stringify({ text: trimmed, lang: opts?.lang ?? 'en' }),
       signal: opts?.signal,
     });
   } catch {

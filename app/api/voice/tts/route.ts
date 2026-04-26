@@ -46,6 +46,12 @@ export async function POST(request: NextRequest) {
     ? String((body as { text: unknown }).text).trim()
     : '';
 
+  const langRaw =
+    typeof body === 'object' && body !== null && 'lang' in body
+      ? String((body as { lang: unknown }).lang).trim().toLowerCase()
+      : '';
+  const lang = langRaw === 'zh' ? 'zh' : 'en';
+
   if (!text) {
     return NextResponse.json({ error: 'text is required' }, { status: 400 });
   }
@@ -53,7 +59,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `text exceeds ${MAX_CHARS} characters` }, { status: 400 });
   }
 
-  const modelId = process.env.ELEVENLABS_MODEL_ID?.trim() || 'eleven_turbo_v2_5';
+  // Chinese reads more reliably on multilingual models; English keeps turbo default.
+  const modelId =
+    lang === 'zh'
+      ? process.env.ELEVENLABS_MODEL_ID_ZH?.trim() || 'eleven_multilingual_v2'
+      : process.env.ELEVENLABS_MODEL_ID?.trim() || 'eleven_turbo_v2_5';
 
   const upstream = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(vId)}`,

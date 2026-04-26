@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IDEAL_HI, IDEAL_LO } from '@/lib/cpr/cprAssistPhase';
+import { t, type Lang } from '@/components/lifelink/i18n';
 import { playElevenLabsLine, stopElevenLabsPlayback } from '@/lib/voice/playElevenLabsLine';
+
+type VoiceHwKey =
+  | 'voice.cpr.hw.pushHarder'
+  | 'voice.cpr.hw.easeDeep'
+  | 'voice.cpr.hw.speedUp'
+  | 'voice.cpr.hw.slowDown'
+  | 'voice.cpr.hw.keepGoing';
 
 const HARDWARE_DEPTH_COOLDOWN_MS = 12_000;
 const HARDWARE_RATE_COOLDOWN_MS = 14_000;
@@ -19,6 +27,8 @@ type Options = {
   voiceEnabledByUser: boolean;
   /** While on helper call, stop TTS and do not enqueue new lines. */
   voiceMutedForCall: boolean;
+  /** Matches UI language for TTS text and model. */
+  lang: Lang;
 };
 
 /**
@@ -41,6 +51,9 @@ export function useCprElevenLabsVoice(opts: Options) {
   hardwareRef.current = opts.hardwareActive;
   mutedForCallRef.current = opts.voiceMutedForCall;
 
+  const langRef = useRef(opts.lang);
+  langRef.current = opts.lang;
+
   useEffect(() => {
     if (opts.voiceEnabledByUser) return;
     stopElevenLabsPlayback();
@@ -56,13 +69,13 @@ export function useCprElevenLabsVoice(opts: Options) {
     chainRef.current = Promise.resolve();
   }, [opts.voiceMutedForCall]);
 
-  const speak = useCallback((text: string) => {
-    if (!text.trim()) return;
-
+  const speak = useCallback((key: VoiceHwKey) => {
     chainRef.current = chainRef.current.then(async () => {
       if (!enabledRef.current || !hardwareRef.current || mutedForCallRef.current) return;
+      const text = t(key, langRef.current).trim();
+      if (!text) return;
       try {
-        const ok = await playElevenLabsLine(text);
+        const ok = await playElevenLabsLine(text, { lang: langRef.current });
         if (!ok) {
           setLastError('Voice request failed');
           return;
@@ -100,7 +113,7 @@ export function useCprElevenLabsVoice(opts: Options) {
     if (d < IDEAL_LO - 0.25) {
       if (now - lastDepthCueRef.current >= HARDWARE_DEPTH_COOLDOWN_MS) {
         lastDepthCueRef.current = now;
-        speak('Push harder. Use your body weight. Let the chest come all the way up.');
+        speak('voice.cpr.hw.pushHarder');
       }
       return;
     }
@@ -108,7 +121,7 @@ export function useCprElevenLabsVoice(opts: Options) {
     if (d > IDEAL_HI + 0.35) {
       if (now - lastDepthCueRef.current >= HARDWARE_DEPTH_COOLDOWN_MS) {
         lastDepthCueRef.current = now;
-        speak('Ease up slightly. You are a little too deep.');
+        speak('voice.cpr.hw.easeDeep');
       }
       return;
     }
@@ -117,15 +130,15 @@ export function useCprElevenLabsVoice(opts: Options) {
     if (bpm != null && bpm > 0 && (bpm < 100 || bpm > 125)) {
       if (now - lastRateCueRef.current >= HARDWARE_RATE_COOLDOWN_MS) {
         lastRateCueRef.current = now;
-        if (bpm < 100) speak('Speed up. Push faster with the beat.');
-        else speak('Slow down slightly. Stay near one hundred ten beats per minute.');
+        if (bpm < 100) speak('voice.cpr.hw.speedUp');
+        else speak('voice.cpr.hw.slowDown');
       }
       return;
     }
 
     if (d >= IDEAL_LO && d <= IDEAL_HI && now - lastKeepGoingRef.current >= HARDWARE_KEEP_GOING_MS) {
       lastKeepGoingRef.current = now;
-      speak('Good. Keep going. Stay with the beat.');
+      speak('voice.cpr.hw.keepGoing');
     }
   }, [
     opts.voiceEnabledByUser,

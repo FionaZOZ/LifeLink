@@ -1,12 +1,21 @@
 'use client';
 import * as React from 'react';
+import { usePathname } from 'next/navigation';
 
 export type Lang = 'en' | 'zh';
 
 const KEY = 'lifelink:lang';
 
+/** Root home defaults to English until the user picks 中文 (then storage carries zh into `/sos`, etc.). */
+function isRootHomePath(): boolean {
+  if (typeof window === 'undefined') return false;
+  const p = window.location.pathname;
+  return p === '/' || p === '';
+}
+
 export function getLang(): Lang {
   if (typeof window === 'undefined') return 'en';
+  if (isRootHomePath()) return 'en';
   const v = window.localStorage.getItem(KEY);
   return v === 'zh' ? 'zh' : 'en';
 }
@@ -17,10 +26,29 @@ export function setLangValue(l: Lang) {
   window.dispatchEvent(new CustomEvent('lifelink:lang-change', { detail: l }));
 }
 
+/** Clear saved language to default (English) and notify listeners. Use on sign-out to guest. */
+export function resetLangToEnglish() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(KEY);
+  window.dispatchEvent(new CustomEvent('lifelink:lang-change', { detail: 'en' as Lang }));
+}
+
 export function useLang(): [Lang, (l: Lang) => void] {
+  const pathname = usePathname();
+  // Must match server first paint (always 'en') or Next.js raises a hydration error.
+  // Never read localStorage in useState's initializer — it differs on client vs SSR.
   const [lang, setLang] = React.useState<Lang>('en');
+
+  React.useLayoutEffect(() => {
+    setLang(getLang());
+  }, []);
+
+  // Entering or leaving `/sos` changes effective language without touching saved pref.
   React.useEffect(() => {
     setLang(getLang());
+  }, [pathname]);
+
+  React.useEffect(() => {
     const onChange = (e: Event) => {
       const detail = (e as CustomEvent<Lang>).detail;
       setLang(detail ?? getLang());
@@ -251,6 +279,32 @@ const DICT: Record<string, Record<Lang, string>> = {
   // ── language picker ────────────────────────────────────────────────────
   'lang.title':            { en: 'Language',       zh: '语言' },
   'lang.intro':            { en: 'Choose the language LifeLink uses.', zh: '选择 LifeLink 使用的语言。' },
+
+  // ── voice / ElevenLabs (full sentences for TTS; mirror UI language) ───
+  'voice.sos.respond.1':   { en: 'Tap their shoulders firmly.', zh: '用力拍打患者的双肩。' },
+  'voice.sos.respond.2':   { en: 'Shout: Are you OK?', zh: '大声问：你还好吗？' },
+  'voice.sos.respond.3':   { en: 'Look for any movement, sound, or eye opening for up to ten seconds.', zh: '在最多十秒内，观察是否有动作、声音或睁眼。' },
+  'voice.sos.respond.4':   { en: 'If they moved, spoke, or opened their eyes, choose they responded. If not, choose no response to continue.', zh: '若他们有动作、开口说话或睁眼，请选择有反应；否则选择无反应以继续。' },
+
+  'voice.sos.breathe.1':   { en: 'Tilt their head back. Watch the chest.', zh: '将头后仰，观察胸部起伏。' },
+  'voice.sos.breathe.2':   { en: 'Look, listen, and feel for normal breathing for no more than ten seconds. Gasping is not normal breathing.', zh: '在不超过十秒的时间内，看、听、感受是否有正常呼吸。喘息不算正常呼吸。' },
+  'voice.sos.breathe.3':   { en: 'If they are breathing normally, choose that option. If they are not breathing or only gasping, start CPR now.', zh: '若呼吸正常，请选择该选项；若未呼吸或仅有喘息，请立即开始心肺复苏。' },
+
+  'voice.sos.tutorial.1':  { en: 'Before you start compressions, place your hands like this.', zh: '在开始胸外按压之前，请先把双手像这样放好。' },
+  'voice.sos.tutorial.2':  { en: 'Put the heel of one hand on the center of the chest, on the lower half of the breastbone.', zh: '将一只手的掌根放在胸部正中央、胸骨下半段。' },
+  'voice.sos.tutorial.3':  { en: 'If you have a sensor patch, place it on the spot where you will press.', zh: '如果你有传感器贴片，请把它贴在你将要按压的位置。' },
+  'voice.sos.tutorial.4':  { en: 'Stack your other hand on top. Heel of one, palm of the other.', zh: '另一只手叠在上面，一只手掌根、另一只手掌覆盖。' },
+  'voice.sos.tutorial.5':  { en: 'Lock your elbows. Keep your arms straight with your shoulders over your hands.', zh: '伸直手臂锁紧手肘，肩膀位于双手正上方。' },
+  'voice.sos.tutorial.6':  { en: 'Push about two inches deep using your whole body weight.', zh: '用全身力量向下按压约两英寸深。' },
+  'voice.sos.tutorial.7':  { en: 'Push at about one hundred ten beats per minute, roughly twice per second.', zh: '以每分钟约一百一十次按压，大约每秒两次。' },
+  'voice.sos.tutorial.8':  { en: 'Let the chest fully come back up between pushes. Do not lean on the chest.', zh: '每次按压之间让胸部完全回弹，不要倚靠在胸部上。' },
+  'voice.sos.tutorial.9':  { en: 'When you are ready, tap start CPR.', zh: '准备好后，点击开始心肺复苏。' },
+
+  'voice.cpr.hw.pushHarder': { en: 'Push harder. Use your body weight. Let the chest come all the way up.', zh: '再用力按压。用上全身重量。让胸口完全回弹。' },
+  'voice.cpr.hw.easeDeep':   { en: 'Ease up slightly. You are a little too deep.', zh: '稍微轻一点。按压略深了。' },
+  'voice.cpr.hw.speedUp':    { en: 'Speed up. Push faster with the beat.', zh: '加快。跟着节拍更快按压。' },
+  'voice.cpr.hw.slowDown':   { en: 'Slow down slightly. Stay near one hundred ten beats per minute.', zh: '稍微放慢。保持在每分钟一百一十次左右。' },
+  'voice.cpr.hw.keepGoing':  { en: 'Good. Keep going. Stay with the beat.', zh: '很好。继续。跟上节拍。' },
 
   // ── SOS / shared ──────────────────────────────────────────────────────
   'sos.banner.active':     { en: 'EMERGENCY ACTIVE · {time}', zh: '紧急中 · {time}' },
