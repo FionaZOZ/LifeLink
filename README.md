@@ -1,4 +1,8 @@
 <div align="center">
+
+<!-- Replace this banner with your own image. Recommended size: 1600x600. -->
+<img src="docs/assets/lifelink-hero-banner.png" alt="LifeLink hero banner" width="100%" />
+
 <br />
 
 # 🚑 LifeLink
