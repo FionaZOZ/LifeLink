@@ -56,7 +56,22 @@ export default function CPRTutorialPage() {
       {/* scrollable body — leave room for patch row + CTAs */}
       <div style={{ position: 'absolute', top: 50, left: 0, right: 0, bottom: 138, overflowY: 'auto', padding: '20px 22px 24px' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>{t('cpr.tut.beforeYouStart')}</div>
-        <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.1, whiteSpace: 'pre-line' }}>
+        <div
+          style={{
+            marginTop: 10,
+            padding: '12px 14px',
+            background: 'rgba(245, 158, 11, 0.12)',
+            border: '1px solid rgba(245, 158, 11, 0.35)',
+            borderRadius: 12,
+            fontSize: 14,
+            fontWeight: 700,
+            color: X.INK,
+            lineHeight: 1.45,
+          }}
+        >
+          {t('cpr.tut.flatSurface')}
+        </div>
+        <div style={{ marginTop: 12, fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.1, whiteSpace: 'pre-line' }}>
           {t('cpr.tut.title')}
         </div>
 

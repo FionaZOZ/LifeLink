@@ -276,6 +276,7 @@ const DICT: Record<string, Record<Lang, string>> = {
   'voice.sos.breathe.2':   { en: 'Look, listen, and feel for normal breathing for no more than ten seconds. Gasping is not normal breathing.', zh: '在不超过十秒的时间内，看、听、感受是否有正常呼吸。喘息不算正常呼吸。' },
   'voice.sos.breathe.3':   { en: 'If they are breathing normally, choose that option. If they are not breathing or only gasping, start CPR now.', zh: '若呼吸正常，请选择该选项；若未呼吸或仅有喘息，请立即开始心肺复苏。' },
 
+  'voice.sos.tutorial.0':  { en: 'Put the patient onto a firm, flat surface when it is safe to do so.', zh: '在安全的前提下，请将患者移到坚硬、平坦的地面上。' },
   'voice.sos.tutorial.1':  { en: 'Before you start compressions, place your hands like this.', zh: '在开始胸外按压之前，请先把双手像这样放好。' },
   'voice.sos.tutorial.2':  { en: 'Put the heel of one hand on the center of the chest, on the lower half of the breastbone.', zh: '将一只手的掌根放在胸部正中央、胸骨下半段。' },
   'voice.sos.tutorial.3':  { en: 'If you have a sensor patch, place it on the spot where you will press.', zh: '如果你有传感器贴片，请把它贴在你将要按压的位置。' },
@@ -419,6 +420,7 @@ const DICT: Record<string, Record<Lang, string>> = {
 
   // ── CPR / tutorial ────────────────────────────────────────────────────
   'cpr.tut.beforeYouStart':{ en: 'BEFORE YOU START', zh: '开始之前' },
+  'cpr.tut.flatSurface':   { en: 'Put the patient onto a firm, flat surface when it is safe to do so.', zh: '在安全的前提下，请将患者移到坚硬、平坦的地面上。' },
   'cpr.tut.title':         { en: 'Place your hands\nlike this.', zh: '把双手\n这样放置。' },
   'cpr.tut.center':        { en: '① CENTER OF CHEST', zh: '① 胸部中央' },
   'cpr.tut.center.sub':    { en: 'Lower half of breastbone', zh: '胸骨下半段' },
