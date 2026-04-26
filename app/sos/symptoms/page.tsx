@@ -66,7 +66,7 @@ export default function SymptomsPage() {
       </div>
 
       {/* Body */}
-      <div style={{ position: 'absolute', top: 110, left: 0, right: 0, bottom: 100, overflowY: 'auto', padding: '16px 22px 24px', boxSizing: 'border-box' }}>
+      <div className="ll-scroll-hide" style={{ position: 'absolute', top: 110, left: 0, right: 0, bottom: 100, overflowY: 'auto', padding: '16px 22px 24px', boxSizing: 'border-box' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2, fontWeight: 700 }}>{t('sos.symp.section.tap')}</div>
 
         <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>

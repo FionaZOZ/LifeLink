@@ -54,7 +54,7 @@ export default function CPRTutorialPage() {
       <EmergencyBanner/>
 
       {/* scrollable body — leave room for patch row + CTAs */}
-      <div style={{ position: 'absolute', top: 50, left: 0, right: 0, bottom: 138, overflowY: 'auto', padding: '20px 22px 24px' }}>
+      <div className="ll-scroll-hide" style={{ position: 'absolute', top: 50, left: 0, right: 0, bottom: 138, overflowY: 'auto', padding: '20px 22px 24px' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>{t('cpr.tut.beforeYouStart')}</div>
         <div
           style={{

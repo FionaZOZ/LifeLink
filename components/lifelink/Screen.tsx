@@ -11,10 +11,17 @@ import { useT } from './i18n';
 
 export function Stage({ children }: { children: React.ReactNode }) {
   return (
-    <div className="ll-stage">
-      {children}
-      <HelperToast/>
-      <CallScreen/>
+    <div className="ll-phone-shell">
+      <div className="ll-stage">
+        <div className="ll-stage-safe">
+          {children}
+          <HelperToast/>
+        </div>
+        {/* CallScreen sits outside the safe wrapper so the fullscreen call
+            view covers the entire screen (under the Dynamic Island), like
+            iPhone full-screen apps. */}
+        <CallScreen/>
+      </div>
     </div>
   );
 }
@@ -28,7 +35,12 @@ export function Screen({ children, bg = X.BG, padTop = 60 }: ScreenProps) {
   return (
     <div style={{
       width: '100%', height: '100%', background: bg, color: X.INK,
-      fontFamily: FONT.body, paddingTop: padTop, position: 'relative', overflow: 'hidden',
+      fontFamily: FONT.body, paddingTop: padTop,
+      // overflow is `visible` (not hidden) so headers can use a negative
+      // `top` to bleed up under the iPhone Dynamic Island. The outer .ll-stage
+      // already has overflow:hidden, so anything that bleeds further than the
+      // screen edge gets clipped to the rounded device.
+      position: 'relative', overflow: 'visible',
     }}>{children}</div>
   );
 }
@@ -80,9 +92,16 @@ export function EmergencyBanner({ time, endHref = '/sos/complete' }: { time?: st
   const { t } = useT();
   return (
     <div style={{
-      position: 'absolute', top: 0, left: 0, right: 0,
+      position: 'absolute',
+      // Bleed up through the safe-area wrapper so the banner red fills the
+      // entire screen top — including the Dynamic Island area on the iPhone
+      // demo frame. Internal padding-top equals the safe area itself so the
+      // back-arrow / timer / EMS-here pill sit just below the island.
+      top: 'calc(0px - var(--ll-safe-top, 0px))',
+      left: 0, right: 0,
       background: X.RED, color: '#fff',
-      padding: '14px 12px 8px', display: 'flex', alignItems: 'center',
+      padding: 'var(--ll-safe-top, 14px) 12px 8px',
+      display: 'flex', alignItems: 'center',
       gap: 8, zIndex: 10,
     }}>
       <button onClick={() => router.back()} aria-label="Back" style={{
@@ -126,7 +145,9 @@ export function TabBar({ active = 'home' }: { active?: TabId }) {
     <div style={{
       position: 'absolute', bottom: 0, left: 0, right: 0,
       background: '#fff', borderTop: `1px solid ${X.LINE}`,
-      padding: '10px 8px 28px', display: 'flex', justifyContent: 'space-around', zIndex: 5,
+      // Bottom padding hugs the screen edge in the iPhone frame; real-mobile
+      // home-indicator clearance is unnecessary inside the demo chassis.
+      padding: '10px 8px 14px', display: 'flex', justifyContent: 'space-around', zIndex: 5,
     }}>
       {tabs.map(t => (
         <Link key={t.id} href={t.href} style={{

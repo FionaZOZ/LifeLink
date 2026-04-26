@@ -86,15 +86,16 @@ export default function CompletePage() {
     <Screen bg={X.PAPER} padTop={0}>
       {/* Solid green hero band — replaces the red emergency banner */}
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0,
+        position: 'absolute', top: 'calc(0px - var(--ll-safe-top, 0px))', left: 0, right: 0,
         background: X.GREEN, color: '#fff',
-        padding: '14px 22px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, zIndex: 10,
+        padding: 'calc(14px + var(--ll-safe-top, 0px)) 22px 8px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, zIndex: 10,
       }}>
         <Icon name="check" size={14} color="#fff" stroke={3}/>
         <span style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.6, fontWeight: 700 }}>{t('sos.complete.handedOff', { time: fmtElapsed(totalSeconds) })}</span>
       </div>
 
-      <div style={{ padding: '70px 22px 0', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
+      <div className="ll-scroll-hide" style={{ padding: '70px 22px 0', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.GREEN, letterSpacing: 1.4, fontWeight: 700 }}>{t('sos.complete.statusLabel')}</div>
         <div style={{ marginTop: 4, fontSize: 28, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.6, lineHeight: 1.05, whiteSpace: 'pre-line' }}>
           {t('sos.complete.title')}

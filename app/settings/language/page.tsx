@@ -17,7 +17,7 @@ export default function LanguagePage() {
   return (
     <Screen>
       <TopBar title={t('lang.title')} leading="back" backHref="/profile"/>
-      <div style={{ padding: '8px 22px 24px', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
+      <div className="ll-scroll-hide" style={{ padding: '8px 22px 24px', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
         <div style={{ marginTop: 6, fontSize: 13, color: X.INK2, lineHeight: 1.5 }}>
           {t('lang.intro')}
         </div>

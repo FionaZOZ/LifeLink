@@ -31,7 +31,7 @@ function ProfileGuest({ setRole }: { setRole: (r: DemoRole) => void }) {
   return (
     <Screen>
       <TopBar title={t('profile.title')} leading="none"/>
-      <div style={{ position: 'absolute', top: 60, left: 0, right: 0, bottom: 80, overflowY: 'auto', padding: '12px 22px 24px' }}>
+      <div className="ll-scroll-hide" style={{ position: 'absolute', top: 60, left: 0, right: 0, bottom: 80, overflowY: 'auto', padding: '12px 22px 24px' }}>
         {/* Hero */}
         <div style={{ padding: 22, background: X.INK, color: '#fff', borderRadius: 20, position: 'relative', overflow: 'hidden' }}>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.65 }}>{t('profile.network')}</div>
@@ -150,7 +150,7 @@ function ProfileVolunteer({ setRole, patientToo = false }: { setRole: (r: DemoRo
   return (
     <Screen>
       <TopBar title={t('profile.title')} leading="none"/>
-      <div style={{ position: 'absolute', top: 60, left: 0, right: 0, bottom: 80, overflowY: 'auto', padding: '0 22px 24px' }}>
+      <div className="ll-scroll-hide" style={{ position: 'absolute', top: 60, left: 0, right: 0, bottom: 80, overflowY: 'auto', padding: '0 22px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 64, height: 64, borderRadius: 32, background: X.GREEN, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 22, fontFamily: FONT.display }}>MK</div>
           <div>
@@ -265,7 +265,7 @@ function ProfilePatient({ setRole }: { setRole: (r: DemoRole) => void }) {
   return (
     <Screen>
       <TopBar title={t('profile.title')} leading="none"/>
-      <div style={{ position: 'absolute', top: 60, left: 0, right: 0, bottom: 80, overflowY: 'auto', padding: '0 22px 24px' }}>
+      <div className="ll-scroll-hide" style={{ position: 'absolute', top: 60, left: 0, right: 0, bottom: 80, overflowY: 'auto', padding: '0 22px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 64, height: 64, borderRadius: 32, background: X.RED, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 22, fontFamily: FONT.display }}>ET</div>
           <div>

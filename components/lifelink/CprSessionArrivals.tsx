@@ -155,121 +155,167 @@ export function AedGuideModal({
 }) {
   if (!open) return null;
 
-  const chip = (v: AedShockAnswer, label: string) => (
-    <button
-      key={v}
-      type="button"
-      onClick={() => onShockAnswer(v)}
-      style={{
-        all: 'unset',
-        cursor: 'pointer',
-        padding: '8px 12px',
-        borderRadius: 999,
-        fontSize: 10,
-        fontFamily: FONT.mono,
-        fontWeight: 700,
-        letterSpacing: 0.8,
-        border: `1px solid ${shockAnswer === v ? '#fff' : 'rgba(255,255,255,0.35)'}`,
-        background: shockAnswer === v ? 'rgba(255,255,255,0.2)' : 'transparent',
-        color: '#fff',
-      }}
-    >
-      {label}
-    </button>
-  );
+  const chip = (v: AedShockAnswer, label: string) => {
+    const on = shockAnswer === v;
+    return (
+      <button
+        key={v}
+        type="button"
+        onClick={() => onShockAnswer(v)}
+        style={{
+          all: 'unset',
+          cursor: 'pointer',
+          padding: '8px 14px',
+          borderRadius: 999,
+          fontSize: 12,
+          fontWeight: 700,
+          fontFamily: FONT.body,
+          border: `1.5px solid ${on ? X.AMBER : X.LINE}`,
+          background: on ? X.AMBER : '#fff',
+          color: on ? '#fff' : X.INK,
+          transition: 'background 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out',
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="AED use guide"
+      onClick={onClose}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         inset: 0,
         zIndex: 500,
-        background: 'rgba(0,0,0,0.92)',
-        overflowY: 'auto',
-        padding: '56px 18px 28px',
-        color: '#fff',
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
       }}
     >
-      <div style={{ maxWidth: 420, margin: '0 auto' }}>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.AMBER, fontWeight: 700 }}>
-          AED ON SCENE
-        </div>
-        <h2 style={{ margin: '6px 0 12px', fontSize: 20, fontWeight: 800, fontFamily: FONT.display }}>Use guide</h2>
-        <div
-          style={{
-            borderRadius: 14,
-            overflow: 'hidden',
-            border: '1px solid rgba(255,255,255,0.12)',
-            background: '#111',
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/cpr/aed-use-guide.png"
-            alt="AED pad placement on chest: upper right and lower left; turn device on and follow voice prompts; shock only if advised."
-            style={{ width: '100%', height: 'auto', display: 'block' }}
-          />
-        </div>
-        <p style={{ margin: '14px 0 10px', fontSize: 12, lineHeight: 1.45, color: 'rgba(255,255,255,0.82)' }}>
-          Did the AED deliver a shock?
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {chip('yes', 'Yes')}
-          {chip('no', 'No')}
-          {chip('unknown', 'Not sure')}
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            all: 'unset',
-            cursor: 'pointer',
-            display: 'block',
-            width: '100%',
-            marginTop: 20,
-            padding: 14,
-            textAlign: 'center',
-            borderRadius: 14,
-            background: X.GREEN,
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 14,
-            fontFamily: FONT.body,
-          }}
-        >
-          Back to CPR
-        </button>
-        {onAmbulanceArrived && (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxHeight: '92%',
+          background: X.PAPER,
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+          boxShadow: '0 -10px 40px rgba(0,0,0,0.25)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Drag handle */}
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: X.LINE, margin: '10px auto 0' }}/>
+
+        {/* Header */}
+        <div style={{ padding: '12px 22px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.AMBER, fontWeight: 700 }}>
+              AED ON SCENE
+            </div>
+            <h2 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.4, color: X.INK }}>Use guide</h2>
+          </div>
           <button
             type="button"
-            onClick={onAmbulanceArrived}
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              all: 'unset', cursor: 'pointer',
+              width: 32, height: 32, borderRadius: 10,
+              background: X.BG, color: X.INK,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <Icon name="x" size={16} color={X.INK} stroke={2.4}/>
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="ll-scroll-hide" style={{ overflowY: 'auto', padding: '14px 22px 18px', flex: 1 }}>
+          <div
+            style={{
+              borderRadius: 14,
+              overflow: 'hidden',
+              border: `1px solid ${X.LINE}`,
+              background: X.BG,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/cpr/aed-use-guide.png"
+              alt="AED pad placement on chest: upper right and lower left; turn device on and follow voice prompts; shock only if advised."
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+            />
+          </div>
+          <div style={{ marginTop: 16, fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2, fontWeight: 700 }}>DID THE AED DELIVER A SHOCK?</div>
+          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {chip('yes', 'Yes')}
+            {chip('no', 'No')}
+            {chip('unknown', 'Not sure')}
+          </div>
+        </div>
+
+        {/* Sticky bottom CTAs */}
+        <div style={{ padding: '14px 22px 22px', borderTop: `1px solid ${X.LINE}`, background: X.PAPER }}>
+          <button
+            type="button"
+            onClick={onClose}
             style={{
               all: 'unset',
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
+              display: 'block',
               width: '100%',
-              marginTop: 10,
+              boxSizing: 'border-box',
               padding: 14,
               textAlign: 'center',
               borderRadius: 14,
+              background: X.GREEN,
+              color: '#fff',
               fontWeight: 800,
               fontSize: 14,
               fontFamily: FONT.body,
-              background: 'rgba(44,102,232,0.2)',
-              border: `1.5px solid ${X.BLUE}`,
-              color: '#fff',
+              boxShadow: '0 6px 18px rgba(31,138,77,0.3)',
             }}
           >
-            <Icon name="phone" size={14} color="#fff" stroke={2.2} />
-            <span>Ambulance arrived</span>
+            Back to CPR
           </button>
-        )}
+          {onAmbulanceArrived && (
+            <button
+              type="button"
+              onClick={onAmbulanceArrived}
+              style={{
+                all: 'unset',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                width: '100%',
+                boxSizing: 'border-box',
+                marginTop: 10,
+                padding: 14,
+                textAlign: 'center',
+                borderRadius: 14,
+                fontWeight: 700,
+                fontSize: 13,
+                fontFamily: FONT.body,
+                background: X.BLUE_BG,
+                border: `1.5px solid ${X.BLUE}`,
+                color: X.BLUE,
+              }}
+            >
+              <Icon name="phone" size={14} color={X.BLUE} stroke={2.2} />
+              <span>Ambulance arrived</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -306,16 +352,17 @@ export function AmbulanceSummaryModal({
       style={{
         display: 'flex',
         justifyContent: 'space-between',
+        alignItems: 'baseline',
         gap: 16,
         padding: '10px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        borderBottom: `1px solid ${X.LINE2}`,
         fontSize: 13,
       }}
     >
-      <span style={{ color: 'rgba(255,255,255,0.65)', fontFamily: FONT.mono, fontSize: 10, letterSpacing: 0.6 }}>
+      <span style={{ color: X.INK2, fontFamily: FONT.mono, fontSize: 10, letterSpacing: 0.6 }}>
         {label}
       </span>
-      <span style={{ fontWeight: 700, textAlign: 'right' }}>{value}</span>
+      <span style={{ fontWeight: 700, textAlign: 'right', color: X.INK }}>{value}</span>
     </div>
   );
 
@@ -324,88 +371,133 @@ export function AmbulanceSummaryModal({
       role="dialog"
       aria-modal="true"
       aria-label="CPR session summary"
+      onClick={onClose}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         inset: 0,
         zIndex: 500,
-        background: 'rgba(0,0,0,0.92)',
-        overflowY: 'auto',
-        padding: '56px 18px 28px',
-        color: '#fff',
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
       }}
     >
-      <div style={{ maxWidth: 420, margin: '0 auto' }}>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.BLUE, fontWeight: 700 }}>
-          AMBULANCE ON SCENE
-        </div>
-        <h2 style={{ margin: '6px 0 8px', fontSize: 20, fontWeight: 800, fontFamily: FONT.display }}>CPR summary</h2>
-        {snapshot.cycles302 === 0 &&
-          snapshot.compressionsClock === 0 &&
-          snapshot.sensorCount == null &&
-          snapshot.idealBandPct == null &&
-          snapshot.avgBpm == null &&
-          snapshot.lastBpm == null && (
-            <p style={{ margin: '0 0 14px', fontSize: 12, lineHeight: 1.45, color: 'rgba(255,255,255,0.72)' }}>
-              No CPR assist log on this phone yet — only total time is shown. Open <strong>Ambulance arrived</strong> from the CPR screen during a future session to capture compressions, BPM, and AED details.
-            </p>
-          )}
-        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: '4px 14px 8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-          {row(durationLabel, fmtDuration(snapshot.durationMs))}
-          {row('30:2 sets completed', String(snapshot.cycles302))}
-          {row('Compressions (guided clock)', String(snapshot.compressionsClock))}
-          {row('Patch compression count', snapshot.sensorCount != null ? String(snapshot.sensorCount) : '—')}
-          {row('% in ideal depth band (patch)', snapshot.idealBandPct != null ? `${snapshot.idealBandPct}%` : '—')}
-          {row('Average BPM (patch)', snapshot.avgBpm != null ? `${snapshot.avgBpm}` : '—')}
-          {row('Last BPM (patch)', snapshot.lastBpm != null ? `${snapshot.lastBpm}` : '—')}
-          {row('Target BPM', String(snapshot.targetBpm))}
-          {row('AED arrived', snapshot.aedArrived ? 'Yes' : 'No')}
-          {row('AED shock delivered', shockLabel(snapshot.aedShockDelivered))}
-        </div>
-        {onEndEmergency && (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxHeight: '92%',
+          background: X.PAPER,
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+          boxShadow: '0 -10px 40px rgba(0,0,0,0.25)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Drag handle */}
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: X.LINE, margin: '10px auto 0' }}/>
+
+        {/* Header */}
+        <div style={{ padding: '12px 22px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.BLUE, fontWeight: 700 }}>
+              AMBULANCE ON SCENE
+            </div>
+            <h2 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.4, color: X.INK }}>CPR summary</h2>
+          </div>
           <button
             type="button"
-            onClick={onEndEmergency}
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              all: 'unset', cursor: 'pointer',
+              width: 32, height: 32, borderRadius: 10,
+              background: X.BG, color: X.INK,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <Icon name="x" size={16} color={X.INK} stroke={2.4}/>
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="ll-scroll-hide" style={{ overflowY: 'auto', padding: '14px 22px 18px', flex: 1 }}>
+          {snapshot.cycles302 === 0 &&
+            snapshot.compressionsClock === 0 &&
+            snapshot.sensorCount == null &&
+            snapshot.idealBandPct == null &&
+            snapshot.avgBpm == null &&
+            snapshot.lastBpm == null && (
+              <p style={{ margin: '0 0 14px', fontSize: 12, lineHeight: 1.5, color: X.INK2 }}>
+                No CPR assist log on this phone yet — only total time is shown. Open <strong style={{ color: X.INK }}>Ambulance arrived</strong> from the CPR screen during a future session to capture compressions, BPM, and AED details.
+              </p>
+            )}
+          <div style={{ background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 14, padding: '4px 14px 8px' }}>
+            {row(durationLabel, fmtDuration(snapshot.durationMs))}
+            {row('30:2 sets completed', String(snapshot.cycles302))}
+            {row('Compressions (guided clock)', String(snapshot.compressionsClock))}
+            {row('Patch compression count', snapshot.sensorCount != null ? String(snapshot.sensorCount) : '—')}
+            {row('% in ideal depth band (patch)', snapshot.idealBandPct != null ? `${snapshot.idealBandPct}%` : '—')}
+            {row('Average BPM (patch)', snapshot.avgBpm != null ? `${snapshot.avgBpm}` : '—')}
+            {row('Last BPM (patch)', snapshot.lastBpm != null ? `${snapshot.lastBpm}` : '—')}
+            {row('Target BPM', String(snapshot.targetBpm))}
+            {row('AED arrived', snapshot.aedArrived ? 'Yes' : 'No')}
+            {row('AED shock delivered', shockLabel(snapshot.aedShockDelivered))}
+          </div>
+        </div>
+
+        {/* Sticky bottom CTAs */}
+        <div style={{ padding: '14px 22px 22px', borderTop: `1px solid ${X.LINE}`, background: X.PAPER }}>
+          {onEndEmergency && (
+            <button
+              type="button"
+              onClick={onEndEmergency}
+              style={{
+                all: 'unset',
+                cursor: 'pointer',
+                display: 'block',
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: 14,
+                textAlign: 'center',
+                borderRadius: 14,
+                background: X.GREEN,
+                color: '#fff',
+                fontWeight: 800,
+                fontSize: 14,
+                fontFamily: FONT.body,
+                boxShadow: '0 6px 18px rgba(31,138,77,0.3)',
+              }}
+            >
+              End emergency
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
             style={{
               all: 'unset',
               cursor: 'pointer',
               display: 'block',
               width: '100%',
-              marginTop: 18,
+              boxSizing: 'border-box',
+              marginTop: onEndEmergency ? 10 : 0,
               padding: 14,
               textAlign: 'center',
               borderRadius: 14,
-              background: X.GREEN,
-              color: '#fff',
-              fontWeight: 800,
+              background: onEndEmergency ? X.BG : X.BLUE,
+              border: onEndEmergency ? `1px solid ${X.LINE}` : 'none',
+              color: onEndEmergency ? X.INK : '#fff',
+              fontWeight: onEndEmergency ? 700 : 800,
               fontSize: 14,
               fontFamily: FONT.body,
             }}
           >
-            End emergency
+            {dismissLabel}
           </button>
-        )}
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            all: 'unset',
-            cursor: 'pointer',
-            display: 'block',
-            width: '100%',
-            marginTop: onEndEmergency ? 10 : 18,
-            padding: 14,
-            textAlign: 'center',
-            borderRadius: 14,
-            background: onEndEmergency ? 'rgba(255,255,255,0.1)' : X.BLUE,
-            border: onEndEmergency ? '1px solid rgba(255,255,255,0.25)' : 'none',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 14,
-            fontFamily: FONT.body,
-          }}
-        >
-          {dismissLabel}
-        </button>
+        </div>
       </div>
     </div>
   );

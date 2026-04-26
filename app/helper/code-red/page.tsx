@@ -11,6 +11,14 @@ export default function CodeRedPage() {
   const { t } = useT();
   return (
     <Screen bg={X.RED} padTop={50}>
+      {/* Bleed the page's red bg up into the iPhone safe-area so the Dynamic
+          Island sits on red, not on the screen's bg color. */}
+      <div style={{
+        position: 'absolute',
+        top: 'calc(0px - var(--ll-safe-top, 0px))', left: 0, right: 0,
+        height: 'var(--ll-safe-top, 0px)',
+        background: X.RED, pointerEvents: 'none', zIndex: 0,
+      }}/>
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', top: 220, left: '50%', width: 360, height: 360, marginLeft: -180, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.18)', animation: 'll-pulse-ring 2s ease-out infinite' }}/>
         <div style={{ position: 'absolute', top: 240, left: '50%', width: 320, height: 320, marginLeft: -160, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.25)', animation: 'll-pulse-ring 2s ease-out infinite 0.6s' }}/>

@@ -14,6 +14,8 @@ export const CPR_PROFILE_SHEET_ACKED_KEY = 'lifelink:cprProfileSheetAcked';
 export const CPR_SUMMARY_HAD_PATCH_SENSOR_KEY = 'lifelink:cprSummaryHadPatchSensor';
 /** Integer 0–100: % of patch depth samples in ideal band during CPR assist; consumed on `/sos/complete`. */
 export const CPR_SUMMARY_IDEAL_BAND_PCT_KEY = 'lifelink:cprSummaryIdealBandPct';
+/** Set once the READY → 3 → 2 → 1 → GO countdown on /sos/cpr/assist has played; subsequent re-mounts skip it. Cleared on emergency start/end. */
+export const CPR_COUNTDOWN_PLAYED_KEY = 'lifelink:cprCountdownPlayed';
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour — drop stale timers from previous browser sessions
 
 export function startSosTimer() {
@@ -29,6 +31,7 @@ export function startSosTimer() {
     window.sessionStorage.removeItem(CPR_PROFILE_SHEET_ACKED_KEY);
     window.sessionStorage.removeItem(CPR_SUMMARY_HAD_PATCH_SENSOR_KEY);
     window.sessionStorage.removeItem(CPR_SUMMARY_IDEAL_BAND_PCT_KEY);
+    window.sessionStorage.removeItem(CPR_COUNTDOWN_PLAYED_KEY);
   } catch {
     /* ignore */
   }
@@ -43,6 +46,7 @@ export function clearSosTimer() {
   try {
     window.sessionStorage.removeItem(LAST_AMBULANCE_REPORT_KEY);
     window.sessionStorage.removeItem(CPR_PROFILE_SHEET_ACKED_KEY);
+    window.sessionStorage.removeItem(CPR_COUNTDOWN_PLAYED_KEY);
     // Intentionally keep CPR_SUMMARY_HAD_PATCH_SENSOR_KEY — set just before clear for `/sos/complete`; consumed there.
   } catch {
     /* ignore */

@@ -57,6 +57,7 @@ export function PatientProfileSheet({ profile, open, onDismiss, syncedAt, syncEr
       <div
         role="dialog"
         aria-label={t('cpr.profile.aria')}
+        className="ll-scroll-hide"
         style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 310,
           background: '#fff', color: X.INK,

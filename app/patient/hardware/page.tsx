@@ -26,7 +26,7 @@ export default function PatientHardwarePage() {
   return (
     <Screen>
       <TopBar title={t('pat.hw.title')} leading="back" backHref="/profile"/>
-      <div style={{ padding: '8px 22px 24px', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
+      <div className="ll-scroll-hide" style={{ padding: '8px 22px 24px', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
 
         {/* ── Heart beat (Apple Watch) ───────────────────────────────── */}
         <SectionLabel>{t('pat.hw.heartBeat')}</SectionLabel>

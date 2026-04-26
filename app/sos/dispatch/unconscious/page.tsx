@@ -47,7 +47,7 @@ export default function DispatchUnconsciousPage() {
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>
 
-      <div style={{
+      <div className="ll-scroll-hide" style={{
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 100,
         overflowY: 'auto',
         padding: '70px 22px 24px',

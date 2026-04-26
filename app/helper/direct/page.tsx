@@ -13,7 +13,7 @@ export default function DirectToPatientPage() {
   const { t } = useT();
   return (
     <Screen padTop={0}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '50px 18px 12px', background: '#fff', borderBottom: `1px solid ${X.LINE}`, zIndex: 8 }}>
+      <div style={{ position: 'absolute', top: 'calc(0px - var(--ll-safe-top, 0px))', left: 0, right: 0, padding: 'calc(14px + var(--ll-safe-top, 36px)) 18px 12px', background: '#fff', borderBottom: `1px solid ${X.LINE}`, zIndex: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button onClick={() => router.push('/helper/pickup-aed')} aria-label={t('common.back')} style={{ all: 'unset', cursor: 'pointer', width: 36, height: 36, borderRadius: 12, background: X.INK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="chevron-right" size={20} color="#fff" stroke={2.4} style={{ transform: 'rotate(180deg)' }}/>

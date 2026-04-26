@@ -157,18 +157,105 @@
 .ll-blink { animation: ll-blink 0.9s steps(2, end) infinite; }
 .ll-breathe { animation: ll-breathe 2.4s ease-in-out infinite; }
 
-/* Phone-shaped centered viewport for desktop demo, full-width on mobile */
-.ll-stage {
+/* Hide native scrollbar chrome inside scroll containers — keeps the iPhone
+   mockup clean. Scrolling still works via touch / wheel / keyboard. */
+.ll-scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.ll-scroll-hide::-webkit-scrollbar { display: none; }
+
+/* Mobile / short-laptop default — flush full-viewport, no phone-in-phone, no safe area. */
+.ll-phone-shell {
   position: relative;
   width: 100%;
-  max-width: 440px;
   height: 100vh;
   height: 100dvh;
-  margin: 0 auto;
+  margin: 0;
+  padding: 0;
+  background: var(--ll-bg);
+  box-sizing: border-box;
+}
+.ll-stage {
+  /* In the desktop iPhone frame this becomes 56 px (Dynamic Island safe area).
+     Page content sits inside .ll-stage-safe which is shifted down by this
+     amount; top-anchored headers (EmergencyBanner / custom headers) bleed
+     UP through `top: calc(0px - var(--ll-safe-top))` so their own bg fills
+     the safe area, while their internal padding-top includes the same value
+     so text/buttons stay clear of the island. */
+  --ll-safe-top: 0px;
+  position: relative;
+  width: 100%;
+  height: 100%;
   background: var(--ll-bg);
   overflow: hidden;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.35);
 }
-@media (max-width: 440px) {
-  .ll-stage { box-shadow: none; }
+/* Inner safe-area wrapper — page content lives here so absolute children
+   (using `top: 0`, `top: 60` etc) automatically sit below the Dynamic
+   Island. Bottom-anchored content (TabBar, sticky CTAs) is unaffected
+   because the wrapper extends to the stage bottom. CallScreen is a
+   sibling of this wrapper so the fullscreen call view fills the entire
+   screen (real iPhone full-screen apps render under the island). */
+.ll-stage-safe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: var(--ll-safe-top);
+}
+
+/* Desktop demo (≥ 768 px wide AND ≥ 880 px tall): wrap the app in an iPhone-style
+   chassis. The screen fills the device (14 px bezel all around). The Dynamic
+   Island floats over the screen, exactly like a real iPhone — headers extend
+   their own bg up under the island via the --ll-safe-top variable. */
+@media (min-width: 768px) and (min-height: 880px) {
+  .ll-phone-shell {
+    max-width: 472px;
+    height: calc(100vh - 16px);
+    height: calc(100dvh - 16px);
+    max-height: 1000px;
+    margin: 8px auto;
+    /* Thinner top bezel so the Dynamic Island sits closer to the phone top
+       edge — matches a real iPhone where the chassis above the screen is
+       only a few pixels tall. */
+    padding: 6px 14px 14px;
+    background: linear-gradient(160deg, #2c2c2e 0%, #1c1c1e 50%, #0a0a0c 100%);
+    border-radius: 56px;
+    box-shadow:
+      0 0 0 2px #4a4a4d inset,            /* inner titanium edge */
+      0 0 0 1px rgba(255,255,255,0.08),   /* outer highlight */
+      0 50px 120px rgba(0,0,0,0.55),      /* drop shadow */
+      0 10px 30px rgba(0,0,0,0.35);
+  }
+  /* Dynamic Island — sits flush with the very top of the screen, like a
+     real iPhone where the island lives a few pixels below the bezel edge. */
+  .ll-phone-shell::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 26px;
+    background: #000;
+    border-radius: 14px;
+    z-index: 200;
+    pointer-events: none;
+  }
+  /* Power button (right edge, faux titanium) */
+  .ll-phone-shell::after {
+    content: '';
+    position: absolute;
+    right: -3px;
+    top: 200px;
+    width: 4px;
+    height: 90px;
+    background: #1f1f21;
+    border-radius: 2px;
+    box-shadow: -1px 0 1px rgba(0,0,0,0.4) inset;
+    pointer-events: none;
+  }
+  .ll-stage {
+    /* Island bottom sits at ~y=28 inside the stage; safe-top of 32 gives
+       4 px breathing room before content starts. */
+    --ll-safe-top: 32px;
+    border-radius: 44px;
+  }
 }

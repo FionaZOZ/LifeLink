@@ -41,6 +41,7 @@ import {
   CPR_PROFILE_SHEET_ACKED_KEY,
   CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
   CPR_SUMMARY_IDEAL_BAND_PCT_KEY,
+  CPR_COUNTDOWN_PLAYED_KEY,
 } from '@/components/lifelink/sosTimer';
 import { ensureBeatAudioUnlocked } from '@/lib/compressionBeatSound';
 import { stopElevenLabsPlayback } from '@/lib/voice/playElevenLabsLine';
@@ -219,8 +220,17 @@ export default function CPRAssistPage() {
   /** Wall time when AED or ambulance modal began; used to extend `startRef` on resume so elapsed freezes. */
   const pauseWallStartRef = React.useRef<number | null>(null);
   const [pausedElapsedMs, setPausedElapsedMs] = React.useState<number | null>(null);
-  const [cprLive, setCprLive] = React.useState(false);
-  const [countOverlay, setCountOverlay] = React.useState<'READY' | '3' | '2' | '1' | 'GO' | null>('READY');
+  // Has the READY → 3 → 2 → 1 → GO countdown already played in this SOS session?
+  // Persisted via sessionStorage so navigating away and back doesn't replay it.
+  // Cleared in startSosTimer / clearSosTimer so a fresh emergency starts fresh.
+  const countdownAlreadyPlayed = (() => {
+    if (typeof window === 'undefined') return false;
+    try { return window.sessionStorage.getItem(CPR_COUNTDOWN_PLAYED_KEY) === '1'; } catch { return false; }
+  })();
+  const [cprLive, setCprLive] = React.useState(countdownAlreadyPlayed);
+  const [countOverlay, setCountOverlay] = React.useState<'READY' | '3' | '2' | '1' | 'GO' | null>(
+    countdownAlreadyPlayed ? null : 'READY',
+  );
   const cprLiveRef = React.useRef(false);
   cprLiveRef.current = cprLive;
 
@@ -244,6 +254,8 @@ export default function CPRAssistPage() {
           if (s.label === '__start__') {
             setCprLive(true);
             setCountOverlay(null);
+            // Mark countdown as played so re-entering this page skips the overlay.
+            try { window.sessionStorage.setItem(CPR_COUNTDOWN_PLAYED_KEY, '1'); } catch { /* ignore */ }
           } else {
             setCountOverlay(s.label);
           }
@@ -473,7 +485,7 @@ export default function CPRAssistPage() {
       {countOverlay != null && (
         <div
           style={{
-            position: 'fixed',
+            position: 'absolute',
             inset: 0,
             zIndex: 9998,
             background: 'rgba(0,0,0,0.88)',
@@ -556,7 +568,13 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
   return (
     <Screen bg={X.DARK} padTop={0}>
       <EmergencyBanner/>
-      <div style={{ padding: '70px 18px 120px', color: '#fff' }}>
+      <div className="ll-scroll-hide" style={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 110,
+        overflowY: 'auto',
+        padding: '70px 18px 24px',
+        boxSizing: 'border-box',
+        color: '#fff',
+      }}>
         <VoiceCoachRow {...voiceCoach}/>
         <PatchBanner cpr={cpr} connected={false} effectiveProfile={effectiveProfile} isFallbackProfile={isFallbackProfile} onOpenProfile={onOpenProfile}/>
 
@@ -575,7 +593,7 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
 
         {/* Big phase-ring metronome circle */}
         <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', opacity: sessionFrozen ? 0.55 : 1 }}>
-          <PhaseRingCircle phase={phase} size={220} sessionFrozen={sessionFrozen}/>
+          <PhaseRingCircle phase={phase} size={170} sessionFrozen={sessionFrozen}/>
         </div>
 
         {/* Stats row */}
@@ -658,7 +676,13 @@ function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, o
   return (
     <Screen bg={X.DARK} padTop={0}>
       <EmergencyBanner/>
-      <div style={{ padding: '70px 18px 120px', color: '#fff' }}>
+      <div className="ll-scroll-hide" style={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 110,
+        overflowY: 'auto',
+        padding: '70px 18px 24px',
+        boxSizing: 'border-box',
+        color: '#fff',
+      }}>
         <VoiceCoachRow {...voiceCoach}/>
         <PatchBanner
           cpr={cpr}
