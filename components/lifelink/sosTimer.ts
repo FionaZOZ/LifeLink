@@ -12,6 +12,8 @@ export const SOS_COMPLETE_ELAPSED_KEY = 'lifelink:sosCompleteElapsed';
 export const CPR_PROFILE_SHEET_ACKED_KEY = 'lifelink:cprProfileSheetAcked';
 /** `'1'` = patch supplied sensor counts during CPR; `'0'` = phone-only. Cleared in `startSosTimer` or after read on `/sos/complete`; not cleared in `clearSosTimer`. */
 export const CPR_SUMMARY_HAD_PATCH_SENSOR_KEY = 'lifelink:cprSummaryHadPatchSensor';
+/** Integer 0–100: % of patch depth samples in ideal band during CPR assist; consumed on `/sos/complete`. */
+export const CPR_SUMMARY_IDEAL_BAND_PCT_KEY = 'lifelink:cprSummaryIdealBandPct';
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour — drop stale timers from previous browser sessions
 
 export function startSosTimer() {
@@ -26,6 +28,7 @@ export function startSosTimer() {
     window.sessionStorage.removeItem(LAST_AMBULANCE_REPORT_KEY);
     window.sessionStorage.removeItem(CPR_PROFILE_SHEET_ACKED_KEY);
     window.sessionStorage.removeItem(CPR_SUMMARY_HAD_PATCH_SENSOR_KEY);
+    window.sessionStorage.removeItem(CPR_SUMMARY_IDEAL_BAND_PCT_KEY);
   } catch {
     /* ignore */
   }

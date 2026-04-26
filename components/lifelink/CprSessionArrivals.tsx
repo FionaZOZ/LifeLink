@@ -14,6 +14,8 @@ export type CprAmbulanceSnapshot = {
   cycles302: number;
   compressionsClock: number;
   sensorCount: number | null;
+  /** % of patch samples in depth ideal band (5–6 cm); null if no patch or no samples yet. */
+  idealBandPct: number | null;
   lastBpm: number | null;
   avgBpm: number | null;
   targetBpm: number;
@@ -50,7 +52,11 @@ export function readStoredAmbulanceReport(): CprAmbulanceSnapshot | null {
     if (!s) return null;
     const o = JSON.parse(s) as CprAmbulanceSnapshot;
     if (o == null || typeof o.durationMs !== 'number') return null;
-    return o;
+    return {
+      ...o,
+      idealBandPct:
+        typeof o.idealBandPct === 'number' && Number.isFinite(o.idealBandPct) ? o.idealBandPct : null,
+    };
   } catch {
     return null;
   }
@@ -63,6 +69,7 @@ export function buildMinimalAmbulanceSnapshot(sosElapsedSeconds: number): CprAmb
     cycles302: 0,
     compressionsClock: 0,
     sensorCount: null,
+    idealBandPct: null,
     lastBpm: null,
     avgBpm: null,
     targetBpm: TARGET_BPM,
@@ -288,6 +295,7 @@ export function AmbulanceSummaryModal({
     snapshot.cycles302 > 0 ||
     snapshot.compressionsClock > 0 ||
     snapshot.sensorCount != null ||
+    snapshot.idealBandPct != null ||
     snapshot.avgBpm != null ||
     snapshot.lastBpm != null;
   const durationLabel = hasCprDetail ? 'CPR session time' : 'Time on phone (SOS)';
@@ -334,6 +342,7 @@ export function AmbulanceSummaryModal({
         {snapshot.cycles302 === 0 &&
           snapshot.compressionsClock === 0 &&
           snapshot.sensorCount == null &&
+          snapshot.idealBandPct == null &&
           snapshot.avgBpm == null &&
           snapshot.lastBpm == null && (
             <p style={{ margin: '0 0 14px', fontSize: 12, lineHeight: 1.45, color: 'rgba(255,255,255,0.72)' }}>
@@ -345,6 +354,7 @@ export function AmbulanceSummaryModal({
           {row('30:2 sets completed', String(snapshot.cycles302))}
           {row('Compressions (guided clock)', String(snapshot.compressionsClock))}
           {row('Patch compression count', snapshot.sensorCount != null ? String(snapshot.sensorCount) : '—')}
+          {row('% in ideal depth band (patch)', snapshot.idealBandPct != null ? `${snapshot.idealBandPct}%` : '—')}
           {row('Average BPM (patch)', snapshot.avgBpm != null ? `${snapshot.avgBpm}` : '—')}
           {row('Last BPM (patch)', snapshot.lastBpm != null ? `${snapshot.lastBpm}` : '—')}
           {row('Target BPM', String(snapshot.targetBpm))}

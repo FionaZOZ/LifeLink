@@ -40,6 +40,7 @@ import {
   SOS_COMPLETE_ELAPSED_KEY,
   CPR_PROFILE_SHEET_ACKED_KEY,
   CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
+  CPR_SUMMARY_IDEAL_BAND_PCT_KEY,
 } from '@/components/lifelink/sosTimer';
 import { ensureBeatAudioUnlocked } from '@/lib/compressionBeatSound';
 import { stopElevenLabsPlayback } from '@/lib/voice/playElevenLabsLine';
@@ -194,6 +195,9 @@ export default function CPRAssistPage() {
   const [ambulanceOpen, setAmbulanceOpen] = React.useState(false);
   const [ambulanceSnapshot, setAmbulanceSnapshot] = React.useState<CprAmbulanceSnapshot | null>(null);
   const bpmAggRef = React.useRef({ sum: 0, n: 0 });
+  /** Counts patch depth samples while CPR is live (excludes countdown + AED/ambulance pause). */
+  const idealBandAggRef = React.useRef({ inBand: 0, total: 0 });
+  const lastIdealSampleCountRef = React.useRef<number>(-999999);
 
   const [profileAckedOnEntry] = React.useState(() => {
     if (typeof window === 'undefined') return false;
@@ -250,6 +254,8 @@ export default function CPRAssistPage() {
   React.useEffect(() => {
     if (!cprLive) return;
     startRef.current = Date.now();
+    idealBandAggRef.current = { inBand: 0, total: 0 };
+    lastIdealSampleCountRef.current = -999999;
     const id = window.setInterval(() => forceTick((v) => v + 1), 250);
     return () => clearInterval(id);
   }, [cprLive]);
@@ -300,6 +306,20 @@ export default function CPRAssistPage() {
   const depthCm = connected && cpr.lastSample ? voltageToDepth(cpr.lastSample.voltage) : null;
   const hwCount = connected ? (cpr.lastSample?.count ?? 0) : 0;
   const hardwareBpm = useCompressionRateBpm(hwCount);
+
+  React.useEffect(() => {
+    if (!connected || !cprLive || cprScenePaused) return;
+    const sample = cpr.lastSample;
+    if (!sample || !Number.isFinite(sample.voltage)) return;
+    const cnt = sample.count ?? 0;
+    if (cnt === lastIdealSampleCountRef.current) return;
+    lastIdealSampleCountRef.current = cnt;
+    const cm = voltageToDepth(sample.voltage);
+    const ok = cm >= IDEAL_LO && cm <= IDEAL_HI;
+    const a = idealBandAggRef.current;
+    a.total += 1;
+    if (ok) a.inBand += 1;
+  }, [connected, cprLive, cprScenePaused, cpr.lastSample?.count, cpr.lastSample?.voltage]);
 
   React.useEffect(() => {
     if (!connected || !cprLive) return;
@@ -354,11 +374,15 @@ export default function CPRAssistPage() {
     const p = derivePhase(elapsed);
     const agg = bpmAggRef.current;
     const avg = agg.n > 0 ? Math.round(agg.sum / agg.n) : null;
+    const ib = idealBandAggRef.current;
+    const idealBandPct =
+      connected && ib.total > 0 ? Math.round((100 * ib.inBand) / ib.total) : null;
     return {
       durationMs: elapsed,
       cycles302: p.cyclesCompleted,
       compressionsClock: p.totalCompressions,
       sensorCount: connected ? hwCount : null,
+      idealBandPct,
       lastBpm: connected && hardwareBpm != null ? hardwareBpm : null,
       avgBpm: avg,
       targetBpm: TARGET_BPM,
@@ -384,12 +408,19 @@ export default function CPRAssistPage() {
   const endEmergencyFromAssistSummary = React.useCallback(() => {
     const sec = getSosElapsedNow();
     const snap = ambulanceSnapshot;
+    const hadPatch = snap != null && snap.sensorCount !== null;
+    const ib = idealBandAggRef.current;
     try {
       window.sessionStorage.setItem(SOS_COMPLETE_ELAPSED_KEY, String(Math.max(1, sec)));
-      window.sessionStorage.setItem(
-        CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
-        snap != null && snap.sensorCount !== null ? '1' : '0',
-      );
+      window.sessionStorage.setItem(CPR_SUMMARY_HAD_PATCH_SENSOR_KEY, hadPatch ? '1' : '0');
+      if (hadPatch && ib.total > 0) {
+        window.sessionStorage.setItem(
+          CPR_SUMMARY_IDEAL_BAND_PCT_KEY,
+          String(Math.round((100 * ib.inBand) / ib.total)),
+        );
+      } else {
+        window.sessionStorage.removeItem(CPR_SUMMARY_IDEAL_BAND_PCT_KEY);
+      }
     } catch {
       /* ignore */
     }

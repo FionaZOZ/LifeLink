@@ -10,6 +10,7 @@ import {
   clearSosTimer,
   SOS_COMPLETE_ELAPSED_KEY,
   CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
+  CPR_SUMMARY_IDEAL_BAND_PCT_KEY,
 } from '@/components/lifelink/sosTimer';
 
 // Timeline anchors as fractions of total emergency duration. Real elapsed
@@ -47,14 +48,29 @@ export default function CompletePage() {
     return Math.max(30, getSosElapsedNow());
   }, []);
 
-  /** Populated from session when assist/recovery ends; `'--'` if no patch. Key must survive `clearSosTimer` until this page reads it. */
+  /** From session after assist/recovery: real % with patch, `'--'` without patch or no depth samples. */
   const [idealBandStat, setIdealBandStat] = React.useState('78%');
   React.useLayoutEffect(() => {
     try {
-      const v = window.sessionStorage.getItem(CPR_SUMMARY_HAD_PATCH_SENSOR_KEY);
-      if (v == null) return;
+      const patch = window.sessionStorage.getItem(CPR_SUMMARY_HAD_PATCH_SENSOR_KEY);
+      if (patch == null) return;
       window.sessionStorage.removeItem(CPR_SUMMARY_HAD_PATCH_SENSOR_KEY);
-      setIdealBandStat(v === '1' ? '78%' : '--');
+      const pctRaw = window.sessionStorage.getItem(CPR_SUMMARY_IDEAL_BAND_PCT_KEY);
+      window.sessionStorage.removeItem(CPR_SUMMARY_IDEAL_BAND_PCT_KEY);
+      if (patch === '0') {
+        setIdealBandStat('--');
+        return;
+      }
+      if (patch === '1') {
+        if (pctRaw != null && pctRaw.length > 0) {
+          const n = Number(pctRaw);
+          if (Number.isFinite(n)) {
+            setIdealBandStat(`${Math.min(100, Math.max(0, Math.round(n)))}%`);
+            return;
+          }
+        }
+        setIdealBandStat('--');
+      }
     } catch {
       /* ignore */
     }

@@ -15,6 +15,7 @@ import {
   getSosElapsedNow,
   SOS_COMPLETE_ELAPSED_KEY,
   CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
+  CPR_SUMMARY_IDEAL_BAND_PCT_KEY,
 } from '@/components/lifelink/sosTimer';
 
 export default function RecoveryPage() {
@@ -37,6 +38,15 @@ export default function RecoveryPage() {
         CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
         snap.sensorCount !== null ? '1' : '0',
       );
+      if (
+        snap.sensorCount !== null &&
+        typeof snap.idealBandPct === 'number' &&
+        Number.isFinite(snap.idealBandPct)
+      ) {
+        window.sessionStorage.setItem(CPR_SUMMARY_IDEAL_BAND_PCT_KEY, String(Math.round(snap.idealBandPct)));
+      } else {
+        window.sessionStorage.removeItem(CPR_SUMMARY_IDEAL_BAND_PCT_KEY);
+      }
     } catch {
       /* ignore */
     }
