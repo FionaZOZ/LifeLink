@@ -7,6 +7,7 @@ import { Icon } from './Icon';
 import { useSosElapsed, fmtElapsed } from './sosTimer';
 import { HelperToast } from './HelperToast';
 import { CallScreen } from './CallScreen';
+import { useT } from './i18n';
 
 export function Stage({ children }: { children: React.ReactNode }) {
   return (
@@ -76,6 +77,7 @@ export function EmergencyBanner({ time, endHref = '/sos/complete' }: { time?: st
   const router = useRouter();
   const elapsed = useSosElapsed();
   const display = time ?? fmtElapsed(elapsed);
+  const { t } = useT();
   return (
     <div style={{
       position: 'absolute', top: 0, left: 0, right: 0,
@@ -95,18 +97,18 @@ export function EmergencyBanner({ time, endHref = '/sos/complete' }: { time?: st
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
         <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }}/>
         <span style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.6, fontWeight: 700 }}>
-          EMERGENCY ACTIVE · {display}
+          {t('sos.banner.active', { time: display })}
         </span>
       </div>
       {endHref ? (
-        <Link href={endHref} aria-label="Help arrived — end emergency" style={{
+        <Link href={endHref} aria-label={t('sos.banner.emsHere')} style={{
           textDecoration: 'none',
           padding: '4px 10px', borderRadius: 999,
           background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.35)',
           color: '#fff', fontSize: 10, fontWeight: 800, fontFamily: FONT.mono, letterSpacing: 1,
           display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', flexShrink: 0,
         }}>
-          EMS HERE ✓
+          {t('sos.banner.emsHere')}
         </Link>
       ) : <span style={{ width: 32 }}/>}
     </div>
@@ -115,9 +117,10 @@ export function EmergencyBanner({ time, endHref = '/sos/complete' }: { time?: st
 
 type TabId = 'home' | 'me';
 export function TabBar({ active = 'home' }: { active?: TabId }) {
+  const { t } = useT();
   const tabs: { id: TabId; label: string; icon: 'home' | 'user'; href: string }[] = [
-    { id: 'home', label: 'Home', icon: 'home', href: '/' },
-    { id: 'me', label: 'Profile', icon: 'user', href: '/profile' },
+    { id: 'home', label: t('nav.home'),    icon: 'home', href: '/' },
+    { id: 'me',   label: t('nav.profile'), icon: 'user', href: '/profile' },
   ];
   return (
     <div style={{

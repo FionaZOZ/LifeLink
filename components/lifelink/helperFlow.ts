@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { X } from './tokens';
 import { useDispatchElapsed } from './sosTimer';
+import { useT } from './i18n';
 
 // ───────────────────────────────────────────────────────────────
 // Single source of truth for the volunteer/EMS dispatch flow.
@@ -12,68 +13,66 @@ import { useDispatchElapsed } from './sosTimer';
 
 export type HelperState = 'queued' | 'notified' | 'accepted' | 'arriving' | 'on_scene';
 
-export type Helper = {
+// Internal helper definition stores i18n keys instead of raw strings so
+// useHelperFlow() can translate everything at the hook boundary.
+type HelperDef = {
   id: 'marcus' | 'sarah' | 'jordan' | 'ems';
-  name: string;
-  role: string;
+  nameKey: string;
+  roleKey: string;
   color: string;
-  /** seconds after dispatch when their phone gets the alert */
   notifyAt: number;
-  /** seconds after dispatch when they tap Accept (omit for EMS — auto-dispatched) */
   acceptAt?: number;
-  /** ETA in seconds at the moment they accept (or are dispatched, for EMS) */
   etaInitialSec: number;
-  /** how the row reads while en route (after accept) */
-  enRouteCopy: string;
-  /** how the row reads after they arrive (eta = 0) */
-  arrivedCopy: string;
-  /** how the row reads while still pending acceptance */
-  pendingCopy: string;
-  /** label used in the global toast when they accept */
-  toastLabel?: string;
-  /** sub-label used in the toast */
-  toastSub?: string;
-  /** EMS skips the toast — it's a system, not a person */
+  enRouteKey: string;
+  arrivedKey: string;
+  pendingKey: string;
+  toastLabelKey?: string;
+  toastSubKey?: string;
   emitsToast: boolean;
 };
 
-const HELPERS: Helper[] = [
+// Public Helper shape — translated copies (consumers expect plain strings).
+export type Helper = {
+  id: HelperDef['id'];
+  name: string;
+  role: string;
+  color: string;
+  notifyAt: number;
+  acceptAt?: number;
+  etaInitialSec: number;
+  enRouteCopy: string;
+  arrivedCopy: string;
+  pendingCopy: string;
+  toastLabel?: string;
+  toastSub?: string;
+  emitsToast: boolean;
+};
+
+const HELPER_DEFS: HelperDef[] = [
   {
-    id: 'marcus', name: 'Marcus · CPR', role: '0.3 mi · CPR Tier 2', color: X.GREEN,
-    notifyAt: 2, acceptAt: 5,
-    etaInitialSec: 100,
-    enRouteCopy: 'on the way',
-    arrivedCopy: 'on scene · CPR',
-    pendingCopy: 'notified · awaiting accept',
-    toastLabel: 'Marcus accepted', toastSub: 'CPR Tier 2 · ETA 1:40',
+    id: 'marcus', nameKey: 'flow.marcus.name', roleKey: 'flow.marcus.role', color: X.GREEN,
+    notifyAt: 2, acceptAt: 5, etaInitialSec: 100,
+    enRouteKey: 'flow.marcus.enRoute', arrivedKey: 'flow.marcus.arrived', pendingKey: 'flow.marcus.pending',
+    toastLabelKey: 'flow.marcus.toast', toastSubKey: 'flow.marcus.toastSub',
     emitsToast: true,
   },
   {
-    id: 'sarah', name: 'Sarah · AED', role: '0.5 mi · bringing AED', color: X.AMBER,
-    notifyAt: 2, acceptAt: 12,
-    etaInitialSec: 165,
-    enRouteCopy: 'AED on the way',
-    arrivedCopy: '+AED here',
-    pendingCopy: 'notified · awaiting accept',
-    toastLabel: 'Sarah accepted', toastSub: 'Bringing AED · ETA 2:45',
+    id: 'sarah', nameKey: 'flow.sarah.name', roleKey: 'flow.sarah.role', color: X.AMBER,
+    notifyAt: 2, acceptAt: 12, etaInitialSec: 165,
+    enRouteKey: 'flow.sarah.enRoute', arrivedKey: 'flow.sarah.arrived', pendingKey: 'flow.sarah.pending',
+    toastLabelKey: 'flow.sarah.toast', toastSubKey: 'flow.sarah.toastSub',
     emitsToast: true,
   },
   {
-    id: 'jordan', name: 'Jordan · CPR', role: '0.8 mi · CPR Tier 1', color: X.INK2,
-    notifyAt: 3, // alerted but never accepts in the demo window — illustrates the 3-helper notification
-    etaInitialSec: 0,
-    enRouteCopy: 'declined',
-    arrivedCopy: '—',
-    pendingCopy: 'notified',
+    id: 'jordan', nameKey: 'flow.jordan.name', roleKey: 'flow.jordan.role', color: X.INK2,
+    notifyAt: 3, etaInitialSec: 0,
+    enRouteKey: 'flow.jordan.enRoute', arrivedKey: 'flow.jordan.arrived', pendingKey: 'flow.jordan.pending',
     emitsToast: false,
   },
   {
-    id: 'ems', name: 'EMS · ambulance', role: 'ALS unit', color: X.BLUE,
-    notifyAt: 0, acceptAt: 0,
-    etaInitialSec: 285,
-    enRouteCopy: 'dispatched',
-    arrivedCopy: 'on scene · ALS',
-    pendingCopy: 'queueing',
+    id: 'ems', nameKey: 'flow.ems.name', roleKey: 'flow.ems.role', color: X.BLUE,
+    notifyAt: 0, acceptAt: 0, etaInitialSec: 285,
+    enRouteKey: 'flow.ems.enRoute', arrivedKey: 'flow.ems.arrived', pendingKey: 'flow.ems.pending',
     emitsToast: false,
   },
 ];
@@ -81,10 +80,10 @@ const HELPERS: Helper[] = [
 export type HelperRowState = {
   helper: Helper;
   state: HelperState;
-  etaSec: number | null;       // remaining ETA in seconds, null if not en route
-  rowEtaText: string;           // human-readable ETA text ("1:23", "ON SCENE", "PENDING")
-  rowStatusText: string;        // human-readable status copy
-  acceptedAtSec: number | null; // seconds since dispatch when this helper accepted (for toast detection)
+  etaSec: number | null;
+  rowEtaText: string;
+  rowStatusText: string;
+  acceptedAtSec: number | null;
 };
 
 function fmtMmSs(seconds: number): string {
@@ -94,11 +93,15 @@ function fmtMmSs(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function deriveRowState(helper: Helper, dispatchSec: number, confirmed: boolean): HelperRowState {
+type Translate = (key: string, vars?: Record<string, string | number>) => string;
+
+function deriveRowState(helper: Helper, dispatchSec: number, confirmed: boolean, t: Translate): HelperRowState {
   if (!confirmed || dispatchSec < helper.notifyAt) {
     return {
       helper, state: 'queued',
-      etaSec: null, rowEtaText: '—', rowStatusText: helper.id === 'ems' ? 'queueing' : 'awaiting alert',
+      etaSec: null,
+      rowEtaText: t('flow.row.dash'),
+      rowStatusText: helper.id === 'ems' ? t('flow.row.queueing') : t('flow.row.awaitingAlert'),
       acceptedAtSec: null,
     };
   }
@@ -107,7 +110,7 @@ function deriveRowState(helper: Helper, dispatchSec: number, confirmed: boolean)
   if (helper.id === 'jordan') {
     return {
       helper, state: 'notified',
-      etaSec: null, rowEtaText: 'PENDING', rowStatusText: helper.pendingCopy,
+      etaSec: null, rowEtaText: t('flow.row.pendingTag'), rowStatusText: helper.pendingCopy,
       acceptedAtSec: null,
     };
   }
@@ -115,7 +118,7 @@ function deriveRowState(helper: Helper, dispatchSec: number, confirmed: boolean)
   if (helper.acceptAt == null || dispatchSec < helper.acceptAt) {
     return {
       helper, state: 'notified',
-      etaSec: null, rowEtaText: 'PENDING', rowStatusText: helper.pendingCopy,
+      etaSec: null, rowEtaText: t('flow.row.pendingTag'), rowStatusText: helper.pendingCopy,
       acceptedAtSec: null,
     };
   }
@@ -124,14 +127,14 @@ function deriveRowState(helper: Helper, dispatchSec: number, confirmed: boolean)
   if (remaining <= 0) {
     return {
       helper, state: 'on_scene',
-      etaSec: 0, rowEtaText: 'ON SCENE', rowStatusText: helper.arrivedCopy,
+      etaSec: 0, rowEtaText: t('flow.row.onSceneTag'), rowStatusText: helper.arrivedCopy,
       acceptedAtSec: helper.acceptAt,
     };
   }
   if (remaining <= 25) {
     return {
       helper, state: 'arriving',
-      etaSec: remaining, rowEtaText: fmtMmSs(remaining), rowStatusText: 'arriving',
+      etaSec: remaining, rowEtaText: fmtMmSs(remaining), rowStatusText: t('flow.row.arriving'),
       acceptedAtSec: helper.acceptAt,
     };
   }
@@ -144,14 +147,32 @@ function deriveRowState(helper: Helper, dispatchSec: number, confirmed: boolean)
 
 export function useHelperFlow() {
   const { seconds, confirmed } = useDispatchElapsed();
+  const { t, lang } = useT();
 
   return React.useMemo(() => {
-    const rows = HELPERS.map(h => deriveRowState(h, seconds, confirmed));
+    // Resolve i18n keys → strings using the current language.
+    const helpers: Helper[] = HELPER_DEFS.map(d => ({
+      id: d.id,
+      name: t(d.nameKey),
+      role: t(d.roleKey),
+      color: d.color,
+      notifyAt: d.notifyAt,
+      acceptAt: d.acceptAt,
+      etaInitialSec: d.etaInitialSec,
+      enRouteCopy: t(d.enRouteKey),
+      arrivedCopy: t(d.arrivedKey),
+      pendingCopy: t(d.pendingKey),
+      toastLabel: d.toastLabelKey ? t(d.toastLabelKey) : undefined,
+      toastSub:   d.toastSubKey   ? t(d.toastSubKey)   : undefined,
+      emitsToast: d.emitsToast,
+    }));
+    const rows = helpers.map(h => deriveRowState(h, seconds, confirmed, t));
     const alertedCount = rows.filter(r => r.helper.id !== 'ems' && r.state !== 'queued').length;
     const acceptedCount = rows.filter(r => r.state === 'accepted' || r.state === 'arriving' || r.state === 'on_scene').length;
     const onSceneCount = rows.filter(r => r.state === 'on_scene').length;
     return { rows, alertedCount, acceptedCount, onSceneCount, dispatchSec: seconds, confirmed };
-  }, [seconds, confirmed]);
+    // include lang in deps so the memo re-runs when language changes
+  }, [seconds, confirmed, lang, t]);
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -175,6 +196,7 @@ export function useLatestAcceptanceEvent(): {
   dismiss: () => void;
 } {
   const { rows, confirmed } = useHelperFlow();
+  const { t } = useT();
   const seenRef = React.useRef<Set<string>>(new Set());
   const [active, setActive] = React.useState<AcceptanceEvent | null>(null);
 
@@ -190,21 +212,21 @@ export function useLatestAcceptanceEvent(): {
       setActive({
         id: eventId,
         helperId: row.helper.id,
-        title: row.helper.toastLabel ?? `${row.helper.name} accepted`,
+        title: row.helper.toastLabel ?? t('flow.row.acceptedSuffix', { name: row.helper.name }),
         sub: row.helper.toastSub ?? row.helper.role,
         color: row.helper.color,
         triggeredAt: Date.now(),
       });
     }
-  }, [rows, confirmed]);
+  }, [rows, confirmed, t]);
 
   // Auto-clear after TOAST_VISIBLE_MS
   React.useEffect(() => {
     if (!active) return;
-    const t = setTimeout(() => {
+    const tt = setTimeout(() => {
       setActive(prev => prev?.id === active.id ? null : prev);
     }, TOAST_VISIBLE_MS);
-    return () => clearTimeout(t);
+    return () => clearTimeout(tt);
   }, [active]);
 
   const dismiss = React.useCallback(() => setActive(null), []);

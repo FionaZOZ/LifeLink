@@ -7,6 +7,7 @@ import { RadiusMap, type LiveHelper } from '@/components/lifelink/RadiusMap';
 import { ResponderRow } from '@/components/lifelink/Pieces';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { useHelperFlow } from '@/components/lifelink/helperFlow';
+import { useT } from '@/components/lifelink/i18n';
 
 // Map each helperFlow id to its visual marker on the RadiusMap. The startX/Y
 // values match the legacy hardcoded pins so the map composition stays the
@@ -27,6 +28,7 @@ const colorForState = (state: string): string => {
 
 export default function NearbyLivePage() {
   const router = useRouter();
+  const { t } = useT();
   const flow = useHelperFlow();
 
   const liveHelpers: LiveHelper[] = flow.rows
@@ -52,21 +54,21 @@ export default function NearbyLivePage() {
   const enRouteCount = acceptedCount - onSceneCount;
   const totalAlerted = flow.alertedCount + (flow.rows.find(r => r.helper.id === 'ems')?.state !== 'queued' ? 1 : 0);
 
-  const headerSub = `2 mi radius · ${acceptedCount} of ${totalAlerted || 4} accepted · 4 AEDs`;
+  const headerSub = t('sos.map.headerSub', { a: acceptedCount, n: totalAlerted || 4 });
   const sheetTagline = onSceneCount > 0
-    ? `${onSceneCount} ON SCENE · ${enRouteCount} ON THE WAY`
-    : `${enRouteCount} ON THE WAY`;
+    ? t('sos.map.sheetWithScene', { onScene: onSceneCount, enRoute: enRouteCount })
+    : t('sos.map.sheetEnRoute',   { enRoute: enRouteCount });
 
   return (
     <Screen padTop={0}>
       <EmergencyBanner/>
 
       <div style={{ position: 'absolute', top: 50, left: 0, right: 0, padding: '8px 18px', background: '#fff', borderBottom: `1px solid ${X.LINE}`, display: 'flex', alignItems: 'center', gap: 12, zIndex: 8 }}>
-        <button onClick={() => router.back()} aria-label="Back" style={{ all: 'unset', cursor: 'pointer' }}>
+        <button onClick={() => router.back()} aria-label={t('common.back')} style={{ all: 'unset', cursor: 'pointer' }}>
           <Icon name="chevron-right" size={20} color={X.INK} stroke={2.4} style={{ transform: 'rotate(180deg)' }}/>
         </button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>Nearby help &amp; AED</div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>{t('sos.map.title')}</div>
           <div style={{ fontSize: 11, color: X.INK2, fontFamily: FONT.mono }}>{headerSub}</div>
         </div>
       </div>
@@ -82,14 +84,14 @@ export default function NearbyLivePage() {
       }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: X.LINE, margin: '0 auto 10px' }}/>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>Live responders</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{t('sos.map.liveResponders')}</div>
           <div style={{ fontSize: 11, color: onSceneCount > 0 ? X.GREEN : X.INK2, fontFamily: FONT.mono, fontWeight: 700 }}>{sheetTagline}</div>
         </div>
         <div style={{ marginTop: 10 }}>
           {flow.rows.map(r => {
             const isArrived = r.state === 'on_scene';
             const muted = r.state === 'queued' || r.state === 'notified';
-            const tagText = isArrived ? 'ON SCENE' : muted ? r.rowEtaText : `ETA ${r.rowEtaText}`;
+            const tagText = isArrived ? t('sos.map.onScene') : muted ? r.rowEtaText : `${t('sos.map.etaPrefix')} ${r.rowEtaText}`;
             return (
               <ResponderRow
                 key={r.helper.id}
@@ -103,7 +105,7 @@ export default function NearbyLivePage() {
           })}
         </div>
         <div style={{ marginTop: 10 }}>
-          <button onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, background: X.RED, color: '#fff', borderRadius: 12, textAlign: 'center', fontSize: 14, fontWeight: 700 }}>Open CPR guide →</button>
+          <button onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, background: X.RED, color: '#fff', borderRadius: 12, textAlign: 'center', fontSize: 14, fontWeight: 700 }}>{t('sos.map.openCpr')}</button>
         </div>
       </div>
     </Screen>

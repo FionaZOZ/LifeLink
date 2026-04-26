@@ -1,18 +1,20 @@
 'use client';
 import * as React from 'react';
 import { useDemoRole, type DemoRole } from './demoRole';
+import { useT } from './i18n';
 import { X, FONT } from './tokens';
 
-const ROLES: { id: DemoRole; label: string }[] = [
-  { id: 'guest', label: 'Guest' },
-  { id: 'volunteer', label: 'Volunteer' },
-  { id: 'patient', label: 'Patient' },
-  { id: 'both', label: 'Both' },
+const ROLES: { id: DemoRole; key: string }[] = [
+  { id: 'guest',     key: 'demo.role.guest' },
+  { id: 'volunteer', key: 'demo.role.volunteer' },
+  { id: 'patient',   key: 'demo.role.patient' },
+  { id: 'both',      key: 'demo.role.both' },
 ];
 
 export function RoleSwitcher() {
   const [role, setRole] = useDemoRole();
   const [open, setOpen] = React.useState(false);
+  const { t } = useT();
 
   return (
     <div style={{
@@ -26,7 +28,7 @@ export function RoleSwitcher() {
           borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
           padding: 6, minWidth: 160,
         }}>
-          <div style={{ padding: '6px 10px', fontSize: 9, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>DEMO · SWITCH ROLE</div>
+          <div style={{ padding: '6px 10px', fontSize: 9, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>{t('demo.switchRole')}</div>
           {ROLES.map(r => (
             <button
               key={r.id}
@@ -40,7 +42,7 @@ export function RoleSwitcher() {
                 color: role === r.id ? X.RED : X.INK,
               }}
             >
-              {role === r.id ? '● ' : '○ '}{r.label}
+              {role === r.id ? '● ' : '○ '}{t(r.key)}
             </button>
           ))}
         </div>
@@ -59,7 +61,7 @@ export function RoleSwitcher() {
         }}
       >
         <span style={{ width: 8, height: 8, borderRadius: 4, background: X.GREEN, boxShadow: `0 0 8px ${X.GREEN}` }}/>
-        DEMO · {role.toUpperCase()}
+        DEMO · {t(`demo.role.${role}`).toUpperCase()}
       </button>
     </div>
   );

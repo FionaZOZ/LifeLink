@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Icon } from './Icon';
 import { X, FONT } from './tokens';
 import { useAppleWatch, AppleWatchStatus } from '@/lib/useAppleWatch';
+import { useT } from './i18n';
 
 type Variant = 'home' | 'hardware';
 
@@ -12,15 +13,15 @@ type Props = {
   onCardClick?: () => void;
 };
 
-function statusLabel(s: AppleWatchStatus): string {
+function statusLabelKey(s: AppleWatchStatus): string {
   switch (s) {
-    case 'connecting':   return 'CONNECTING…';
+    case 'connecting':   return 'aw.status.connecting';
     case 'connected':
-    case 'simulated':    return 'APPLE WATCH · LIVE';
-    case 'disconnected': return 'APPLE WATCH · LOST CONNECTION';
-    case 'error':        return 'APPLE WATCH · ERROR';
+    case 'simulated':    return 'aw.status.live';
+    case 'disconnected': return 'aw.status.disconnected';
+    case 'error':        return 'aw.status.error';
     case 'idle':
-    default:             return 'APPLE WATCH';
+    default:             return 'aw.status.idle';
   }
 }
 
@@ -31,6 +32,7 @@ function dotColor(s: AppleWatchStatus): string {
 }
 
 export function AppleWatchCard({ variant = 'hardware', onCardClick }: Props) {
+  const { t } = useT();
   const aw = useAppleWatch();
   const live = aw.isConnected;
 
@@ -91,7 +93,7 @@ export function AppleWatchCard({ variant = 'hardware', onCardClick }: Props) {
             animation: live ? 'll-aw-tip-blink 1.4s ease-in-out infinite' : undefined,
             display: 'inline-block',
           }}/>
-          {statusLabel(aw.status)}
+          {t(statusLabelKey(aw.status))}
         </span>
         <AppleWatchGlyph color={X.INK3}/>
       </div>
@@ -108,21 +110,21 @@ export function AppleWatchCard({ variant = 'hardware', onCardClick }: Props) {
         {live ? (
           <>
             <div style={{ flex: 1, fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 0.6 }}>
-              {aw.deviceName ?? 'Apple Watch'}{aw.battery != null ? ` · ${aw.battery}%` : ''}
+              {aw.deviceName ?? t('aw.deviceFallback')}{aw.battery != null ? ` · ${aw.battery}%` : ''}
             </div>
             <button onClick={handleDisconnect} style={pillBtn(X.INK2, '#fff', X.LINE)}>
-              Disconnect
+              {t('aw.action.disconnect')}
             </button>
           </>
         ) : aw.status === 'connecting' ? (
-          <div style={{ flex: 1, fontSize: 12, color: X.INK2 }}>Pairing your Apple Watch…</div>
+          <div style={{ flex: 1, fontSize: 12, color: X.INK2 }}>{t('aw.action.pairing')}</div>
         ) : (
           <>
             <div style={{ flex: 1, fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 0.6 }}>
-              Tap to start streaming
+              {t('aw.action.tapToStart')}
             </div>
             <button onClick={handleConnect} style={pillBtn('#fff', X.RED, X.RED)}>
-              Connect Apple Watch
+              {t('aw.action.connect')}
             </button>
           </>
         )}
@@ -139,6 +141,7 @@ function ConnectedBody({ bpm, battery, variant, deviceName }: {
   variant: Variant;
   deviceName: string | null;
 }) {
+  const { t } = useT();
   const showBig = variant === 'hardware';
   return (
     <div style={{ marginTop: 12 }}>
@@ -170,10 +173,10 @@ function ConnectedBody({ bpm, battery, variant, deviceName }: {
             }}>
               {bpm ?? '—'}
             </span>
-            <span style={{ fontSize: 12, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>BPM</span>
+            <span style={{ fontSize: 12, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>{t('aw.bpm')}</span>
           </div>
           <div style={{ marginTop: 4, fontSize: 12, color: X.INK2 }}>
-            {showBig ? `Live from ${deviceName ?? 'Apple Watch'}` : 'Live from your Apple Watch'}
+            {showBig ? t('aw.live.from', { device: deviceName ?? t('aw.deviceFallback') }) : t('aw.live.fromYour')}
           </div>
         </div>
         {battery != null && <BatteryChip pct={battery}/>}
@@ -200,11 +203,12 @@ function ConnectedBody({ bpm, battery, variant, deviceName }: {
 }
 
 function IdleBody({ status, error }: { status: AppleWatchStatus; error: string | null }) {
-  let title = 'Heart beat from your Apple Watch';
-  let sub = 'Pair your watch to stream a live reading.';
-  if (status === 'connecting') { title = 'Looking for your watch…'; sub = 'Pick the right device in the system chooser.'; }
-  if (status === 'disconnected'){ title = 'Watch disconnected';      sub = 'Reconnect to resume the live reading.'; }
-  if (status === 'error')       { title = 'Couldn\u2019t connect';   sub = error ?? 'Something went wrong while pairing.'; }
+  const { t } = useT();
+  let title = t('aw.idle.title');
+  let sub = t('aw.idle.sub');
+  if (status === 'connecting') { title = t('aw.idle.connecting.title'); sub = t('aw.idle.connecting.sub'); }
+  if (status === 'disconnected'){ title = t('aw.idle.disconnected.title'); sub = t('aw.idle.disconnected.sub'); }
+  if (status === 'error')       { title = t('aw.idle.error.title');     sub = error ?? t('aw.idle.error.sub'); }
 
   return (
     <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 14 }}>

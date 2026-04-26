@@ -3,6 +3,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Icon } from './Icon';
 import { X, FONT } from './tokens';
+import { useT } from './i18n';
 
 const PULSE_DURATION_MS = 10000;
 
@@ -15,6 +16,7 @@ const PULSE_DURATION_MS = 10000;
  * missed by being mid-CPR when it auto-dismisses.
  */
 export function BreathingReassessButton({ cyclesCompleted }: { cyclesCompleted: number }) {
+  const { t } = useT();
   const triggerIndex = Math.floor(cyclesCompleted / 5);
   const lastTriggerRef = React.useRef(0);
   const [pulsing, setPulsing] = React.useState(false);
@@ -55,7 +57,7 @@ export function BreathingReassessButton({ cyclesCompleted }: { cyclesCompleted: 
         />
       )}
       <Icon name="heart" size={14} color={X.GREEN} stroke={2.2}/>
-      <span>Patient has started breathing</span>
+      <span>{t('cpr.assist.reassess')}</span>
       <span style={{ opacity: 0.7 }}>→</span>
     </Link>
   );

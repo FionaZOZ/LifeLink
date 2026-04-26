@@ -7,9 +7,11 @@ import { X, FONT } from '@/components/lifelink/tokens';
 import { isSosFlowActive, startSosTimer } from '@/components/lifelink/sosTimer';
 import { SOS_RESPOND_LINES } from '@/lib/voice/sosNarrationScripts';
 import { useElevenLabsScriptedNarration } from '@/lib/voice/useElevenLabsScriptedNarration';
+import { useT } from '@/components/lifelink/i18n';
 
 export default function ResponsivenessPage() {
   const router = useRouter();
+  const { t } = useT();
   const [narrationArm, setNarrationArm] = React.useState(false);
   React.useLayoutEffect(() => {
     startSosTimer();
@@ -23,9 +25,9 @@ export default function ResponsivenessPage() {
       <div style={{ padding: '70px 22px 0' }}>
         {/* Visual-only step chrome; narration and SR focus on the instruction card. */}
         <div aria-hidden="true">
-          <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>STEP 1 · CHECK · BEFORE WE CALL</div>
-          <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05 }}>
-            Are they<br/>responding?
+          <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>{t('sos.resp.step')}</div>
+          <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05, whiteSpace: 'pre-line' }}>
+            {t('sos.resp.title')}
           </div>
         </div>
 
@@ -38,14 +40,14 @@ export default function ResponsivenessPage() {
               <path d="M 22 32 q -2 -8 4 -10 M 12 30 q -2 -6 2 -10" stroke={X.RED} strokeWidth="2" strokeLinecap="round" fill="none"/>
             </svg>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Tap their shoulders firmly.</div>
-              <div style={{ fontSize: 12, color: X.INK2, marginTop: 2 }}>Shout: <strong style={{ color: X.INK }}>&quot;Are you OK?&quot;</strong></div>
-              <div style={{ fontSize: 12, color: X.INK2, marginTop: 6 }}>Look for any movement, sound, or eye opening — for up to 10 seconds.</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>{t('sos.resp.tap')}</div>
+              <div style={{ fontSize: 12, color: X.INK2, marginTop: 2 }}>{t('sos.resp.shout')} <strong style={{ color: X.INK }}>{t('sos.resp.shoutText')}</strong></div>
+              <div style={{ fontSize: 12, color: X.INK2, marginTop: 6 }}>{t('sos.resp.lookFor')}</div>
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: 14, fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>WHAT DO YOU SEE?</div>
+        <div style={{ marginTop: 14, fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>{t('sos.whatYouSee')}</div>
       </div>
 
       <div style={{ position: 'absolute', left: 22, right: 22, bottom: 38, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -55,8 +57,8 @@ export default function ResponsivenessPage() {
               <Icon name="check" size={18} color={X.GREEN} stroke={2.4}/>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 800 }}>They responded</div>
-              <div style={{ fontSize: 11, color: X.INK2 }}>Moved, made a sound, opened eyes</div>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>{t('sos.resp.respondedYes')}</div>
+              <div style={{ fontSize: 11, color: X.INK2 }}>{t('sos.resp.respondedYes.sub')}</div>
             </div>
             <Icon name="chevron-right" size={18} color={X.INK3} stroke={2.4}/>
           </div>
@@ -67,8 +69,8 @@ export default function ResponsivenessPage() {
               <Icon name="x" size={20} color="#fff" stroke={2.6}/>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.2 }}>NO RESPONSE</div>
-              <div style={{ fontSize: 11, opacity: 0.9 }}>Continue to breathing check</div>
+              <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.2 }}>{t('sos.resp.respondedNo')}</div>
+              <div style={{ fontSize: 11, opacity: 0.9 }}>{t('sos.resp.respondedNo.sub')}</div>
             </div>
             <Icon name="chevron-right" size={18} color="#fff" stroke={2.4}/>
           </div>

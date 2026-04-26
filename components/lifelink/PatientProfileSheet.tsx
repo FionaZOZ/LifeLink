@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Icon } from './Icon';
 import { X, FONT } from './tokens';
 import type { SerialPatientProfile } from '@/lib/cpr/useSerialCPR';
+import { useT } from './i18n';
 
 function ageFromDob(dob?: string): string | null {
   if (!dob) return null;
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export function PatientProfileSheet({ profile, open, onDismiss, syncedAt, syncError }: Props) {
+  const { t } = useT();
   // Animate in/out only after the consumer has mounted us with a profile.
   const [shown, setShown] = React.useState(false);
   React.useEffect(() => {
@@ -54,7 +56,7 @@ export function PatientProfileSheet({ profile, open, onDismiss, syncedAt, syncEr
       {/* sheet */}
       <div
         role="dialog"
-        aria-label="Patient profile loaded from LifeLink Patch"
+        aria-label={t('cpr.profile.aria')}
         style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 310,
           background: '#fff', color: X.INK,
@@ -75,46 +77,46 @@ export function PatientProfileSheet({ profile, open, onDismiss, syncedAt, syncEr
             <Icon name="check" size={16} color={X.GREEN} stroke={3}/>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.GREEN, fontWeight: 700 }}>PATCH PROFILE LOADED</div>
+            <div style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.GREEN, fontWeight: 700 }}>{t('cpr.profile.loaded')}</div>
             <div style={{ fontSize: 11, color: X.INK2 }}>
-              {syncError ? <span style={{ color: X.AMBER }}>local — backend sync failed</span>
-                : syncedAt ? `Synced to LifeLink server · ${new Date(syncedAt).toLocaleTimeString()}`
-                : 'Reading from patch…'}
+              {syncError ? <span style={{ color: X.AMBER }}>{t('cpr.profile.syncErr')}</span>
+                : syncedAt ? t('cpr.profile.syncedAt', { time: new Date(syncedAt).toLocaleTimeString() })
+                : t('cpr.profile.reading')}
             </div>
           </div>
         </div>
 
         {/* name + age */}
         <div style={{ marginTop: 14, fontSize: 28, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.6 }}>
-          {profile?.name ?? 'Unknown patient'}{age && <span style={{ color: X.INK2 }}>, {age}</span>}
+          {profile?.name ?? t('cpr.profile.unknown')}{age && <span style={{ color: X.INK2 }}>, {age}</span>}
         </div>
         {profile?.dob && (
-          <div style={{ fontSize: 12, color: X.INK2, fontFamily: FONT.mono, marginTop: 2 }}>DOB {profile.dob}</div>
+          <div style={{ fontSize: 12, color: X.INK2, fontFamily: FONT.mono, marginTop: 2 }}>{t('cpr.profile.dob', { dob: profile.dob })}</div>
         )}
 
         {/* vital info grid */}
         <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {profile?.bloodType && (
-            <Field label="BLOOD TYPE" value={profile.bloodType} accent={X.RED}/>
+            <Field label={t('cpr.profile.field.bloodType')} value={profile.bloodType} accent={X.RED}/>
           )}
           {profile?.allergies && (
-            <Field label="ALLERGIES" value={profile.allergies} accent={X.AMBER}/>
+            <Field label={t('cpr.profile.field.allergies')} value={profile.allergies} accent={X.AMBER}/>
           )}
         </div>
 
         {/* conditions + meds — full width because they tend to be longer */}
         {profile?.conditions && (
-          <FullRow label="CONDITIONS" value={profile.conditions} accent={X.RED}/>
+          <FullRow label={t('cpr.profile.field.conditions')} value={profile.conditions} accent={X.RED}/>
         )}
         {profile?.medications && (
-          <FullRow label="MEDICATIONS" value={profile.medications} accent={X.INK}/>
+          <FullRow label={t('cpr.profile.field.medications')} value={profile.medications} accent={X.INK}/>
         )}
 
         {/* emergency contact */}
         {ec && (ec.name || ec.phone) && (
           <div style={{ marginTop: 14, padding: 12, background: X.RED_BG, border: `1px solid ${X.RED}33`, borderRadius: 12 }}>
-            <div style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.RED, fontWeight: 700 }}>EMERGENCY CONTACT</div>
-            <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700 }}>{ec.name ?? '—'}{ec.relation && <span style={{ color: X.INK2, fontWeight: 500 }}> · {ec.relation}</span>}</div>
+            <div style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.RED, fontWeight: 700 }}>{t('cpr.profile.field.emergency')}</div>
+            <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700 }}>{ec.name ?? t('cpr.profile.dash')}{ec.relation && <span style={{ color: X.INK2, fontWeight: 500 }}> · {ec.relation}</span>}</div>
             {ec.phone && <div style={{ fontSize: 12, color: X.INK2, fontFamily: FONT.mono, marginTop: 2 }}>{ec.phone}</div>}
           </div>
         )}
@@ -122,15 +124,15 @@ export function PatientProfileSheet({ profile, open, onDismiss, syncedAt, syncEr
         {/* physician */}
         {phys && (phys.name || phys.phone) && (
           <div style={{ marginTop: 8, padding: 12, background: X.BLUE_BG, border: `1px solid ${X.BLUE}33`, borderRadius: 12 }}>
-            <div style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.BLUE, fontWeight: 700 }}>PHYSICIAN</div>
-            <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700 }}>{phys.name ?? '—'}</div>
+            <div style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.BLUE, fontWeight: 700 }}>{t('cpr.profile.field.physician')}</div>
+            <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700 }}>{phys.name ?? t('cpr.profile.dash')}</div>
             {phys.phone && <div style={{ fontSize: 12, color: X.INK2, fontFamily: FONT.mono, marginTop: 2 }}>{phys.phone}</div>}
           </div>
         )}
 
         {profile?.notes && (
           <div style={{ marginTop: 12, padding: 12, background: X.BG, borderRadius: 12, fontSize: 12, color: X.INK2, lineHeight: 1.5 }}>
-            <div style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2, fontWeight: 700, marginBottom: 4 }}>NOTES</div>
+            <div style={{ fontSize: 10, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2, fontWeight: 700, marginBottom: 4 }}>{t('cpr.profile.field.notes')}</div>
             {profile.notes}
           </div>
         )}
@@ -145,7 +147,7 @@ export function PatientProfileSheet({ profile, open, onDismiss, syncedAt, syncEr
             boxShadow: '0 8px 24px rgba(225,29,46,0.3)',
           }}
         >
-          Got it · start CPR →
+          {t('cpr.profile.gotIt')}
         </button>
       </div>
     </>
