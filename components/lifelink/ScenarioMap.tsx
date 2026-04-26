@@ -5,6 +5,7 @@ import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/mapb
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { SCENARIOS, ScenarioId } from '@/lib/scenarios';
 import circle from '@turf/circle';
+import { Icon } from '@/components/lifelink/Icon';
 
 // Agent event from MongoDB telemetry stream
 export interface AgentEvent {
@@ -340,20 +341,19 @@ export function ScenarioMap({ scenarioId, events }: ScenarioMapProps) {
               anchor="center"
             >
               <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '4px',
-                background: isActivated ? '#10b981' : '#ef4444',
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
                 border: '2px solid white',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                position: 'relative',
+                overflow: 'visible',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'white',
-                fontSize: '14px',
-                position: 'relative',
+                background: '#fff',
               }}>
-                ⚡
+                <Icon name="aed" size={24}/>
                 {isActivated && (
                   <div style={{
                     position: 'absolute',
@@ -368,6 +368,7 @@ export function ScenarioMap({ scenarioId, events }: ScenarioMapProps) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                   }}>
                     ✓
                   </div>
