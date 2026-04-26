@@ -126,32 +126,31 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
 
       {mode !== 'locate' && [[340, 350], [110, 90], [60, 480], [360, 200]].map(([x, y], i) => (
         <g key={i}>
-          {/* Red AED marker — matches the universal red box + white heart-with-bolt look */}
-          <rect x={x-14} y={y-14} width="28" height="28" rx="6" fill={X.RED} stroke="#fff" strokeWidth="1.5"/>
-          {/* White heart */}
+          {/* Red AED tile — heart up top, AED text inside the same tile */}
+          <rect x={x-14} y={y-16} width="28" height="32" rx="5" fill={X.RED} stroke="#fff" strokeWidth="1.2"/>
+          {/* White heart, sitting in the upper half of the tile */}
           <path
-            d={`M ${x} ${y+6}
-                C ${x-3} ${y+3}, ${x-7.5} ${y+0.5}, ${x-7.5} ${y-3}
-                C ${x-7.5} ${y-6.5}, ${x-4.5} ${y-7.5}, ${x-3} ${y-6.5}
-                C ${x-1.5} ${y-5.5}, ${x-0.5} ${y-4.5}, ${x} ${y-3}
-                C ${x+0.5} ${y-4.5}, ${x+1.5} ${y-5.5}, ${x+3} ${y-6.5}
-                C ${x+4.5} ${y-7.5}, ${x+7.5} ${y-6.5}, ${x+7.5} ${y-3}
-                C ${x+7.5} ${y+0.5}, ${x+3} ${y+3}, ${x} ${y+6} Z`}
+            d={`M ${x} ${y-1}
+                C ${x-2.4} ${y-3.4}, ${x-5.5} ${y-5.6}, ${x-5.5} ${y-8.2}
+                C ${x-5.5} ${y-10.4}, ${x-3.4} ${y-11.2}, ${x-2.2} ${y-10}
+                C ${x-1.2} ${y-9.2}, ${x-0.5} ${y-8.4}, ${x} ${y-7.4}
+                C ${x+0.5} ${y-8.4}, ${x+1.2} ${y-9.2}, ${x+2.2} ${y-10}
+                C ${x+3.4} ${y-11.2}, ${x+5.5} ${y-10.4}, ${x+5.5} ${y-8.2}
+                C ${x+5.5} ${y-5.6}, ${x+2.4} ${y-3.4}, ${x} ${y-1} Z`}
             fill="#fff"
           />
-          {/* Red lightning bolt cut through the heart */}
+          {/* Red lightning bolt notched through the heart */}
           <path
-            d={`M ${x+0.4} ${y-4.2}
-                L ${x-2.4} ${y+0.2}
-                L ${x-0.6} ${y+0.2}
-                L ${x-1.2} ${y+3.6}
-                L ${x+2.4} ${y-0.6}
-                L ${x+0.4} ${y-0.6} Z`}
+            d={`M ${x+0.6} ${y-7.8}
+                L ${x-1.6} ${y-4.8}
+                L ${x-0.4} ${y-4.8}
+                L ${x-0.8} ${y-2.4}
+                L ${x+1.8} ${y-5.6}
+                L ${x+0.6} ${y-5.6} Z`}
             fill={X.RED}
           />
-          {/* small AED label sitting under the marker */}
-          <rect x={x-11} y={y+15} width="22" height="10" rx="2" fill="#fff" stroke={X.RED} strokeWidth="0.8"/>
-          <text x={x} y={y+22.5} fontFamily="JetBrains Mono, monospace" fontSize="7" fontWeight="800" fill={X.RED} textAnchor="middle">AED</text>
+          {/* AED text right inside the tile, bottom half */}
+          <text x={x} y={y+11} fontFamily="JetBrains Mono, monospace" fontSize="8" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="0.6">AED</text>
         </g>
       ))}
 
@@ -185,7 +184,10 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
         </g>
       )}
 
-      {(mode === 'locate' || mode === 'live') && (
+      {/* Standalone "You are here" overlay — only relevant on the locate map.
+          On the live emergency map "you" is the victim's centre pin, so the
+          floating upper-left box was confusing and is no longer rendered. */}
+      {mode === 'locate' && (
         <g>
           <rect x="80" y="100" width="120" height="40" rx="10" fill="#fff" stroke={X.LINE} strokeWidth="1"/>
           <circle cx="98" cy="120" r="6" fill={X.BLUE}/>
@@ -195,13 +197,17 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
         </g>
       )}
 
+      {/* Victim / "you" pin — solid red dot, same diameter as helper pins,
+          plain (no checkmark) so it doesn't get confused with arrived helpers.
+          Outer ring pulses so the bystander still spots themselves at a glance. */}
       <g>
         <circle cx={cx} cy={cy} r="22" fill="#E11D2E" fillOpacity="0.18">
           <animate attributeName="r" values="22;36;22" dur="1.6s" repeatCount="indefinite"/>
           <animate attributeName="fill-opacity" values="0.35;0;0.35" dur="1.6s" repeatCount="indefinite"/>
         </circle>
-        <circle cx={cx} cy={cy} r="13" fill="#E11D2E" stroke="#fff" strokeWidth="2.5"/>
-        <path d={`M ${cx-5} ${cy} l 3 3 l 7 -7`} stroke="#fff" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx={cx} cy={cy} r="18" fill="#E11D2E" stroke="#fff" strokeWidth="2.5"/>
+        <rect x={cx-18} y={cy+22} width="36" height="14" rx="7" fill="#E11D2E"/>
+        <text x={cx} y={cy+32} fontFamily="JetBrains Mono, monospace" fontSize="9" fontWeight="800" fill="#fff" textAnchor="middle">YOU</text>
       </g>
     </svg>
   );
