@@ -67,7 +67,7 @@ function HomeGuest() {
           </div>
         </div>
         <div style={{ marginTop: 22, fontSize: 14, color: X.INK, fontWeight: 600, textAlign: 'center', maxWidth: 280, lineHeight: 1.4 }}>
-          If someone is unresponsive, hold to begin.
+          If someone needs help, hold to begin.
         </div>
         <div style={{ marginTop: 6, fontSize: 12, color: X.INK2, textAlign: 'center' }}>
           No account needed.
@@ -118,7 +118,7 @@ function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
           <div>
             <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.65 }}>EMERGENCY CALL</div>
             <div style={{ fontSize: 24, fontWeight: 700, marginTop: 6, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.1 }}>
-              Hold if someone is<br/>unresponsive
+              Hold if someone<br/>needs help
             </div>
           </div>
           <div className="ll-pulse-dot" style={{ width: 56, height: 56, borderRadius: 28, background: X.RED, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 6px rgba(225,29,46,0.18)', animationPlayState: isHolding ? 'paused' : 'running' }}>
