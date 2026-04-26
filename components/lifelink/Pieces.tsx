@@ -22,10 +22,21 @@ export function ListRow({ icon, iconBg, iconColor, title, sub, last }: {
 export function ResponderRow({ name, role, tagText, tagColor, muted }: {
   name: string; role: string; tagText: string; tagColor: string; muted?: boolean;
 }) {
+  // Build the avatar initials from the part of the name BEFORE the first
+  // mid-dot separator — otherwise "Marcus · CPR" becomes "M·" because the
+  // "·" gets treated as its own word.
+  const labelPart = name.split(/\s*·\s*/)[0];
+  const initials = labelPart
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || '?';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${X.LINE2}` }}>
       <div style={{ width: 34, height: 34, borderRadius: 17, background: muted ? X.LINE : X.GREEN, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
-        {name.split(' ').map(n => n[0]).join('').slice(0,2)}
+        {initials}
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 13, fontWeight: 700 }}>{name}</div>
