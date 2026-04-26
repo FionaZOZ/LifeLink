@@ -28,27 +28,27 @@ function ResponderPin({ x, y, initial, eta, muted, badge, color, arrived = false
   const transitionStyle: React.CSSProperties = animate ? { transition: 'cx 700ms cubic-bezier(0.4, 0, 0.2, 1), cy 700ms cubic-bezier(0.4, 0, 0.2, 1)' } : {};
   return (
     <g>
-      <circle cx={x} cy={y} r="18" fill="#fff" stroke={stroke} strokeWidth={muted ? 1 : 2} style={transitionStyle}/>
-      <circle cx={x} cy={y} r="14" fill={ringFill} fillOpacity={ringFillOpacity} style={transitionStyle}/>
+      <circle cx={x} cy={y} r="14" fill="#fff" stroke={stroke} strokeWidth={muted ? 1 : 1.6} style={transitionStyle}/>
+      <circle cx={x} cy={y} r="11" fill={ringFill} fillOpacity={ringFillOpacity} style={transitionStyle}/>
       {arrived ? (
         <path
-          d={`M ${x-5} ${y+1} l 3 3 l 7 -7`}
-          stroke={labelFill} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round"
+          d={`M ${x-4} ${y+0.5} l 2.4 2.4 l 5.5 -5.5`}
+          stroke={labelFill} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"
           style={transitionStyle}
         />
       ) : (
-        <text x={x} y={y+4} fontFamily="Inter, sans-serif" fontSize="12" fontWeight="700" fill={labelFill} textAnchor="middle" style={transitionStyle}>{initial}</text>
+        <text x={x} y={y+3.5} fontFamily="Inter, sans-serif" fontSize="10" fontWeight="700" fill={labelFill} textAnchor="middle" style={transitionStyle}>{initial}</text>
       )}
       {showEta && (
         <g style={transitionStyle}>
-          <rect x={x-22} y={y+22} width="44" height="16" rx="8" fill={arrived ? X.GREEN : '#fff'} stroke={arrived ? X.GREEN : X.LINE}/>
-          <text x={x} y={y+33} fontFamily="JetBrains Mono, monospace" fontSize={arrived ? 8 : 9} fontWeight={arrived ? 800 : 700} fill={arrived ? '#fff' : X.INK} textAnchor="middle">{eta}</text>
+          <rect x={x-18} y={y+17} width="36" height="13" rx="6.5" fill={arrived ? X.GREEN : '#fff'} stroke={arrived ? X.GREEN : X.LINE}/>
+          <text x={x} y={y+26} fontFamily="JetBrains Mono, monospace" fontSize={arrived ? 7 : 8} fontWeight={arrived ? 800 : 700} fill={arrived ? '#fff' : X.INK} textAnchor="middle">{eta}</text>
         </g>
       )}
       {badge && !arrived && (
         <g>
-          <rect x={x-2} y={y-26} width="28" height="14" rx="7" fill={X.AMBER}/>
-          <text x={x+12} y={y-16} fontFamily="Inter, sans-serif" fontSize="9" fontWeight="800" fill="#fff" textAnchor="middle">{badge}</text>
+          <rect x={x-2} y={y-22} width="24" height="12" rx="6" fill={X.AMBER}/>
+          <text x={x+10} y={y-13} fontFamily="Inter, sans-serif" fontSize="8" fontWeight="800" fill="#fff" textAnchor="middle">{badge}</text>
         </g>
       )}
     </g>
@@ -126,31 +126,31 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
 
       {mode !== 'locate' && [[340, 350], [110, 90], [60, 480], [360, 200]].map(([x, y], i) => (
         <g key={i}>
-          {/* Red AED tile — heart up top, AED text inside the same tile */}
-          <rect x={x-14} y={y-16} width="28" height="32" rx="5" fill={X.RED} stroke="#fff" strokeWidth="1.2"/>
-          {/* White heart, sitting in the upper half of the tile */}
+          {/* Red AED tile — 28×28, heart up top + AED text below, all inside the same square */}
+          <rect x={x-14} y={y-14} width="28" height="28" rx="5" fill={X.RED} stroke="#fff" strokeWidth="1.2"/>
+          {/* White heart, upper half of the tile (~9×8, centred around y-5) */}
           <path
-            d={`M ${x} ${y-1}
-                C ${x-2.4} ${y-3.4}, ${x-5.5} ${y-5.6}, ${x-5.5} ${y-8.2}
-                C ${x-5.5} ${y-10.4}, ${x-3.4} ${y-11.2}, ${x-2.2} ${y-10}
-                C ${x-1.2} ${y-9.2}, ${x-0.5} ${y-8.4}, ${x} ${y-7.4}
-                C ${x+0.5} ${y-8.4}, ${x+1.2} ${y-9.2}, ${x+2.2} ${y-10}
-                C ${x+3.4} ${y-11.2}, ${x+5.5} ${y-10.4}, ${x+5.5} ${y-8.2}
-                C ${x+5.5} ${y-5.6}, ${x+2.4} ${y-3.4}, ${x} ${y-1} Z`}
+            d={`M ${x} ${y-1.5}
+                C ${x-2} ${y-3.4}, ${x-4.6} ${y-5}, ${x-4.6} ${y-7.2}
+                C ${x-4.6} ${y-9.2}, ${x-2.6} ${y-9.8}, ${x-1.6} ${y-8.8}
+                C ${x-0.8} ${y-8}, ${x-0.3} ${y-7.6}, ${x} ${y-6.6}
+                C ${x+0.3} ${y-7.6}, ${x+0.8} ${y-8}, ${x+1.6} ${y-8.8}
+                C ${x+2.6} ${y-9.8}, ${x+4.6} ${y-9.2}, ${x+4.6} ${y-7.2}
+                C ${x+4.6} ${y-5}, ${x+2} ${y-3.4}, ${x} ${y-1.5} Z`}
             fill="#fff"
           />
           {/* Red lightning bolt notched through the heart */}
           <path
-            d={`M ${x+0.6} ${y-7.8}
-                L ${x-1.6} ${y-4.8}
-                L ${x-0.4} ${y-4.8}
-                L ${x-0.8} ${y-2.4}
-                L ${x+1.8} ${y-5.6}
-                L ${x+0.6} ${y-5.6} Z`}
+            d={`M ${x+0.5} ${y-7.4}
+                L ${x-1.2} ${y-5}
+                L ${x-0.2} ${y-5}
+                L ${x-0.6} ${y-3}
+                L ${x+1.4} ${y-5.4}
+                L ${x+0.5} ${y-5.4} Z`}
             fill={X.RED}
           />
-          {/* AED text right inside the tile, bottom half */}
-          <text x={x} y={y+11} fontFamily="JetBrains Mono, monospace" fontSize="8" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="0.6">AED</text>
+          {/* AED text in the lower half, inside the same tile */}
+          <text x={x} y={y+8} fontFamily="JetBrains Mono, monospace" fontSize="6.5" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="0.5">AED</text>
         </g>
       ))}
 
@@ -201,13 +201,13 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
           plain (no checkmark) so it doesn't get confused with arrived helpers.
           Outer ring pulses so the bystander still spots themselves at a glance. */}
       <g>
-        <circle cx={cx} cy={cy} r="22" fill="#E11D2E" fillOpacity="0.18">
-          <animate attributeName="r" values="22;36;22" dur="1.6s" repeatCount="indefinite"/>
+        <circle cx={cx} cy={cy} r="16" fill="#E11D2E" fillOpacity="0.18">
+          <animate attributeName="r" values="16;26;16" dur="1.6s" repeatCount="indefinite"/>
           <animate attributeName="fill-opacity" values="0.35;0;0.35" dur="1.6s" repeatCount="indefinite"/>
         </circle>
-        <circle cx={cx} cy={cy} r="18" fill="#E11D2E" stroke="#fff" strokeWidth="2.5"/>
-        <rect x={cx-18} y={cy+22} width="36" height="14" rx="7" fill="#E11D2E"/>
-        <text x={cx} y={cy+32} fontFamily="JetBrains Mono, monospace" fontSize="9" fontWeight="800" fill="#fff" textAnchor="middle">YOU</text>
+        <circle cx={cx} cy={cy} r="11" fill="#E11D2E" stroke="#fff" strokeWidth="2"/>
+        <rect x={cx-14} y={cy+16} width="28" height="12" rx="6" fill="#E11D2E"/>
+        <text x={cx} y={cy+24.5} fontFamily="JetBrains Mono, monospace" fontSize="7.5" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="0.6">YOU</text>
       </g>
     </svg>
   );
