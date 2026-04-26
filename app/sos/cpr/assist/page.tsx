@@ -31,6 +31,7 @@ import {
   type PhaseInfo,
 } from '@/lib/cpr/cprAssistPhase';
 import { useCompressionRateBpm } from '@/lib/cpr/useCompressionRateBpm';
+import { useJsCompressionMetrics } from '@/lib/cpr/useJsCompressionMetrics';
 import { useAssistPushMetronome } from '@/lib/cpr/useAssistPushMetronome';
 import { useCprElevenLabsVoice } from '@/lib/voice/useCprElevenLabsVoice';
 import {
@@ -648,8 +649,14 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
 function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, onOpenProfile, voiceCoach, toolbar, arrival, sessionFrozen }: { cpr: SerialCpr; elapsedMs: number; effectiveProfile?: SerialPatientProfile | null; isFallbackProfile?: boolean; onOpenProfile?: () => void; voiceCoach: VoiceCoachProps; toolbar: AssistToolbarProps; arrival: AssistArrivalProps; sessionFrozen: boolean }) {
   const { t } = useT();
   const liveDepth = cpr.lastSample ? voltageToDepth(cpr.lastSample.voltage) : 0;
-  const liveCount = cpr.lastSample?.count ?? 0;
-  const liveRate = useCompressionRateBpm(cpr.lastSample?.count ?? 0);
+  // The Arduino firmware ships with PEAK_VOLTAGE=4.0V which is too strict for
+  // demo presses (we observed real presses peaking at 3.85 V never crossing
+  // it, so `lastSample.count` stayed at 0). Detect compressions in JS off the
+  // voltage stream with a more permissive threshold instead — voltage itself
+  // from `lastSample.voltage` is trustworthy.
+  const { count: liveCount, bpm: liveRate } = useJsCompressionMetrics(
+    cpr.lastSample?.voltage ?? null,
+  );
   const displayedRate = liveRate ?? 0;
   const inBand = liveDepth >= IDEAL_LO && liveDepth <= IDEAL_HI;
 
