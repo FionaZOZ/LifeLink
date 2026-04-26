@@ -126,8 +126,32 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
 
       {mode !== 'locate' && [[340, 350], [110, 90], [60, 480], [360, 200]].map(([x, y], i) => (
         <g key={i}>
-          <rect x={x-13} y={y-13} width="26" height="26" rx="6" fill="#fff" stroke="#E8852C" strokeWidth="1.5"/>
-          <path d={`M ${x-7} ${y} L ${x-3} ${y} L ${x-1} ${y-4} L ${x+2} ${y+4} L ${x+4} ${y} L ${x+7} ${y}`} stroke="#E8852C" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Red AED marker — matches the universal red box + white heart-with-bolt look */}
+          <rect x={x-14} y={y-14} width="28" height="28" rx="6" fill={X.RED} stroke="#fff" strokeWidth="1.5"/>
+          {/* White heart */}
+          <path
+            d={`M ${x} ${y+6}
+                C ${x-3} ${y+3}, ${x-7.5} ${y+0.5}, ${x-7.5} ${y-3}
+                C ${x-7.5} ${y-6.5}, ${x-4.5} ${y-7.5}, ${x-3} ${y-6.5}
+                C ${x-1.5} ${y-5.5}, ${x-0.5} ${y-4.5}, ${x} ${y-3}
+                C ${x+0.5} ${y-4.5}, ${x+1.5} ${y-5.5}, ${x+3} ${y-6.5}
+                C ${x+4.5} ${y-7.5}, ${x+7.5} ${y-6.5}, ${x+7.5} ${y-3}
+                C ${x+7.5} ${y+0.5}, ${x+3} ${y+3}, ${x} ${y+6} Z`}
+            fill="#fff"
+          />
+          {/* Red lightning bolt cut through the heart */}
+          <path
+            d={`M ${x+0.4} ${y-4.2}
+                L ${x-2.4} ${y+0.2}
+                L ${x-0.6} ${y+0.2}
+                L ${x-1.2} ${y+3.6}
+                L ${x+2.4} ${y-0.6}
+                L ${x+0.4} ${y-0.6} Z`}
+            fill={X.RED}
+          />
+          {/* small AED label sitting under the marker */}
+          <rect x={x-11} y={y+15} width="22" height="10" rx="2" fill="#fff" stroke={X.RED} strokeWidth="0.8"/>
+          <text x={x} y={y+22.5} fontFamily="JetBrains Mono, monospace" fontSize="7" fontWeight="800" fill={X.RED} textAnchor="middle">AED</text>
         </g>
       ))}
 

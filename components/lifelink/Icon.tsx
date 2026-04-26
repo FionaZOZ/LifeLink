@@ -78,7 +78,16 @@ export function Icon({ name, size = 24, color = 'currentColor', stroke = 1.8, fi
     case 'cross':
       return <svg {...svgProps}><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6V3z"/></svg>;
     case 'aed':
-      return <svg {...svgProps}><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 11h2l1.5-3 3 6 1.5-3h2"/></svg>;
+      // Filled red AED tile with a white heart + red bolt cut-through.
+      // Stroke/fill props of the wrapper are ignored — this glyph is intentionally
+      // self-contained so it reads as the universal AED symbol at any size.
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" style={style}>
+          <rect x="2" y="2" width="20" height="20" rx="4" fill="#E11D2E"/>
+          <path d="M12 18 C 9 16, 5 13.5, 5 10.5 C 5 7.5, 7.5 6.5, 9 7.5 C 10.5 8.5, 11.4 9.5, 12 10.5 C 12.6 9.5, 13.5 8.5, 15 7.5 C 16.5 6.5, 19 7.5, 19 10.5 C 19 13.5, 15 16, 12 18 Z" fill="#fff"/>
+          <path d="M12.4 8.4 L 9.8 12.2 L 11.4 12.2 L 10.8 15.2 L 14.2 11.4 L 12.4 11.4 Z" fill="#E11D2E"/>
+        </svg>
+      );
     case 'walk':
       return <svg {...svgProps}><circle cx="13" cy="4" r="2"/><path d="M9 20l2-6-3-2 1-5 4 2 3 3 3 1"/><path d="M11 14l-2 6"/></svg>;
     case 'shuffle':
