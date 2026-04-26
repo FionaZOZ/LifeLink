@@ -30,7 +30,7 @@
 
 <div align="center">
 
-[![Watch the LifeLink Demo](docs/assets/demo-thumbnail.png)](https://www.youtube.com/watch?v=YOUR_DEMO_VIDEO_ID)
+[![Watch the LifeLink Demo](docs/assets/demo.png)](docs/assets/video.mp4)
 
 <br />
 
