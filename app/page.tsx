@@ -146,32 +146,18 @@ function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
         ))}
       </div>
 
-      <div style={{ margin: '14px 22px 0' }}>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2, marginBottom: 8 }}>AROUND YOU</div>
-        <Link href="/sos/map" style={{ textDecoration: 'none', display: 'block', background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, padding: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 12, background: X.RED_BG, color: X.RED, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name="heart" size={20} color={X.RED} stroke={2}/>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: X.INK }}>3 patients in your radius</div>
-              <div style={{ fontSize: 12, color: X.INK2 }}>4 AEDs · 7 volunteers active</div>
-            </div>
-            <Icon name="chevron-right" size={18} color={X.INK3} stroke={2}/>
-          </div>
-        </Link>
-      </div>
-
-      <Link href="/helper/code-red" style={{ textDecoration: 'none', display: 'flex', margin: '10px 22px 0', padding: 14, border: `1px solid ${X.LINE}`, borderRadius: 16, gap: 12, alignItems: 'center', background: '#fff' }}>
-        <div style={{ width: 38, height: 38, borderRadius: 12, background: X.AMBER_BG, color: X.AMBER, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="zap" size={20} color={X.AMBER} stroke={2}/>
+      <div style={{ margin: '14px 22px 0', padding: 16, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 18, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ position: 'relative', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: X.GREEN_BG }}/>
+          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `1.5px solid ${X.GREEN}`, opacity: 0.45, animation: 'll-pulse-ring 2.4s ease-out infinite' }}/>
+          <div className="ll-pulse-dot" style={{ position: 'relative', width: 10, height: 10, borderRadius: 5, background: X.GREEN }}/>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: X.INK }}>30-sec readiness drill</div>
-          <div style={{ fontSize: 12, color: X.INK2 }}>Last completed 6 days ago</div>
+          <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.GREEN, fontWeight: 700 }}>ON CALL</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: X.INK, marginTop: 2 }}>Listening within 240 m</div>
+          <div style={{ fontSize: 12, color: X.INK2, marginTop: 1 }}>Code Red alerts will reach you instantly</div>
         </div>
-        <Icon name="chevron-right" size={18} color={X.INK3} stroke={2}/>
-      </Link>
+      </div>
 
       {patientToo && (
         <Link href="/patient/hardware" style={{ textDecoration: 'none', display: 'flex', margin: '10px 22px 0', padding: 14, border: `1px solid ${X.LINE}`, borderRadius: 16, gap: 12, alignItems: 'center', background: '#fff' }}>

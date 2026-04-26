@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import Link from 'next/link';
 import { Screen, TopBar } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
@@ -13,7 +14,7 @@ export default function PatientContactsPage() {
         backHref="/profile"
         trailing={<Icon name="plus" size={20} color={X.INK} stroke={2.4}/>}
       />
-      <div style={{ padding: '70px 22px 0' }}>
+      <div style={{ padding: '8px 22px 110px' }}>
         <div style={{ padding: 14, background: X.RED_BG, border: `1px solid ${X.RED}33`, borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 32, height: 32, borderRadius: 16, background: X.RED, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="heart" size={16} color="#fff" stroke={2.2} fill="#fff"/>
@@ -52,6 +53,13 @@ export default function PatientContactsPage() {
             <div style={{ position: 'absolute', right: 2, top: 2, width: 20, height: 20, borderRadius: 10, background: '#fff' }}/>
           </div>
         </div>
+      </div>
+
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 22px 24px', background: `linear-gradient(to bottom, ${X.BG}00 0%, ${X.BG} 35%)` }}>
+        <Link href="/patient/hardware" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px 20px', background: X.RED, color: '#fff', borderRadius: 999, fontSize: 15, fontWeight: 800, letterSpacing: 0.3, boxShadow: '0 8px 24px rgba(225,29,46,0.3)' }}>
+          Pair your patch
+          <Icon name="chevron-right" size={18} color="#fff" stroke={2.4}/>
+        </Link>
       </div>
     </Screen>
   );
