@@ -17,6 +17,16 @@ const colorForState = (state: string): string => {
 };
 
 export default function NearbyLivePage() {
+  // useSearchParams must be wrapped in Suspense so Next.js 14 can statically
+  // prerender the rest of the page; without this the build fails.
+  return (
+    <React.Suspense fallback={<Screen padTop={0}><EmergencyBanner/></Screen>}>
+      <NearbyLiveInner/>
+    </React.Suspense>
+  );
+}
+
+function NearbyLiveInner() {
   const router = useRouter();
   const params = useSearchParams();
   const { t } = useT();

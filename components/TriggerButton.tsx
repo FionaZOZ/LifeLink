@@ -74,7 +74,6 @@ export function TriggerButton() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated Database type
           ;(supabase as any)
             .from('emergencies')
-            // @ts-expect-error Supabase inferred types may not match runtime schema
             .insert({
               patient_lat: fallbackLat,
               patient_lon: fallbackLon,
@@ -82,7 +81,7 @@ export function TriggerButton() {
             })
             .select()
             .single()
-            .then(async ({ data, error }) => {
+            .then(async ({ data, error }: { data: { id: string } | null; error: unknown }) => {
               if (error || !data) {
                 toast.error('Failed to trigger emergency');
                 setLoading(false);
