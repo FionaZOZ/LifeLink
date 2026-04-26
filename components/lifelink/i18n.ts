@@ -1,21 +1,13 @@
 'use client';
 import * as React from 'react';
-import { usePathname } from 'next/navigation';
 
 export type Lang = 'en' | 'zh';
 
 const KEY = 'lifelink:lang';
 
-/** Root home defaults to English until the user picks 中文 (then storage carries zh into `/sos`, etc.). */
-function isRootHomePath(): boolean {
-  if (typeof window === 'undefined') return false;
-  const p = window.location.pathname;
-  return p === '/' || p === '';
-}
-
+/** Single source of truth: `lifelink:lang` in localStorage (plus in-memory updates via `lifelink:lang-change`). */
 export function getLang(): Lang {
   if (typeof window === 'undefined') return 'en';
-  if (isRootHomePath()) return 'en';
   const v = window.localStorage.getItem(KEY);
   return v === 'zh' ? 'zh' : 'en';
 }
@@ -34,7 +26,6 @@ export function resetLangToEnglish() {
 }
 
 export function useLang(): [Lang, (l: Lang) => void] {
-  const pathname = usePathname();
   // Must match server first paint (always 'en') or Next.js raises a hydration error.
   // Never read localStorage in useState's initializer — it differs on client vs SSR.
   const [lang, setLang] = React.useState<Lang>('en');
@@ -42,11 +33,6 @@ export function useLang(): [Lang, (l: Lang) => void] {
   React.useLayoutEffect(() => {
     setLang(getLang());
   }, []);
-
-  // Entering or leaving `/sos` changes effective language without touching saved pref.
-  React.useEffect(() => {
-    setLang(getLang());
-  }, [pathname]);
 
   React.useEffect(() => {
     const onChange = (e: Event) => {
