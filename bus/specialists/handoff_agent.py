@@ -13,6 +13,7 @@ from shared.protocols import HandoffSummary, HandoffAck
 from shared.chat import enable_chat, extract_text
 from shared.coverage import haversine_distance
 from shared.discovery import register_capability_tags
+from shared.event_bus import publish
 from datasets.la_stemi_hospitals import LA_STEMI_HOSPITALS
 
 logger = logging.getLogger(__name__)
@@ -135,6 +136,20 @@ def create_handoff_agent(seed: str) -> Agent:
         ctx.logger.info(f"Handoff agent started: {agent.address}")
         ctx.logger.info(f"Loaded {len(LA_STEMI_HOSPITALS)} STEMI receiving centers")
         os.makedirs(os.path.dirname(HANDOFF_LOG_PATH), exist_ok=True)
+
+        # Schedule heartbeat every 5 seconds
+        agent.on_interval(period=5.0)(heartbeat)
+
+    async def heartbeat(ctx: Context):
+        """Publish periodic heartbeat to event bus."""
+        await publish(
+            emergency_id="heartbeat",
+            agent="handoff",
+            capability="hospital-handoff",
+            phase="heartbeat",
+            summary="Handoff agent active",
+            data={"address": str(agent.address)}
+        )
 
     @agent.on_message(model=HandoffSummary, replies={HandoffAck})
     async def handle_handoff(ctx: Context, sender: str, msg: HandoffSummary):

@@ -8,6 +8,7 @@ import asyncio
 from uagents import Agent, Context
 from shared.chat import enable_chat, extract_text
 from shared.discovery import discover_capability, register_capability_tags
+from shared.event_bus import publish
 from coordinator.reasoning import run_reasoning_loop
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,9 @@ def create_coordinator_agent(seed: str) -> Agent:
         # Schedule re-discovery every 60 seconds
         agent.on_interval(period=60.0)(rediscover)
 
+        # Schedule heartbeat every 5 seconds
+        agent.on_interval(period=5.0)(heartbeat)
+
     async def rediscover(ctx: Context):
         """Periodically re-discover specialists in case they come online late."""
         ctx.logger.info("Re-discovering specialists...")
@@ -88,26 +92,78 @@ def create_coordinator_agent(seed: str) -> Agent:
 
         ctx.storage.set("routing_table", routing_table)
 
+    async def heartbeat(ctx: Context):
+        """Publish periodic heartbeat to event bus."""
+        # Publish to a generic emergency_id for monitoring
+        await publish(
+            emergency_id="heartbeat",
+            agent="coordinator",
+            capability="dispatch",
+            phase="heartbeat",
+            summary="Coordinator active",
+            data={"address": str(agent.address)}
+        )
+
     # Chat Protocol handler for ASI:One
     async def chat_handler(ctx: Context, sender: str, msg):
         """Handle chat messages from ASI:One."""
         text = extract_text(msg)
         ctx.logger.info(f"Coordinator chat request: {text[:100]}")
 
+        # Extract emergency_id if present (default to "unknown")
+        emergency_id = "unknown"
+        # Try to extract emergency_id from the message if it's passed
+        # For now, we'll use a simple heuristic
+
+        # Publish request event
+        await publish(
+            emergency_id=emergency_id,
+            agent="coordinator",
+            capability="dispatch",
+            phase="request",
+            summary=f"Received chat request: {text[:50]}",
+            data={"request_text": text[:200]}
+        )
+
         # Check for Anthropic API key
         if not os.getenv("ANTHROPIC_API_KEY"):
-            return ("Coordinator agent running in stub mode (ANTHROPIC_API_KEY not set). "
-                   "I orchestrate 7 specialists: Voice, AED, EMS, Handoff, Optimizer, Triage, Drone. "
-                   "In full mode, I use Claude with tool-use to coordinate parallel emergency response.")
+            response = ("Coordinator agent running in stub mode (ANTHROPIC_API_KEY not set). "
+                       "I orchestrate 7 specialists: Voice, AED, EMS, Handoff, Optimizer, Triage, Drone. "
+                       "In full mode, I use Claude with tool-use to coordinate parallel emergency response.")
+            await publish(
+                emergency_id=emergency_id,
+                agent="coordinator",
+                capability="dispatch",
+                phase="result",
+                summary="Stub mode response",
+                data={"response": response}
+            )
+            return response
 
         # Run the reasoning loop
         routing_table = ctx.storage.get("routing_table") or {}
 
         try:
             response = await run_reasoning_loop(ctx, text, routing_table)
+            await publish(
+                emergency_id=emergency_id,
+                agent="coordinator",
+                capability="dispatch",
+                phase="result",
+                summary="Reasoning loop completed",
+                data={"response": response[:200]}
+            )
             return response
         except Exception as e:
             ctx.logger.error(f"Reasoning loop failed: {e}")
+            await publish(
+                emergency_id=emergency_id,
+                agent="coordinator",
+                capability="dispatch",
+                phase="error",
+                summary=f"Reasoning loop failed: {str(e)}",
+                data={"error": str(e)}
+            )
             return f"Coordinator error: {str(e)}"
 
     chat_proto = enable_chat(agent, chat_handler)

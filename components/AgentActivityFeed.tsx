@@ -2,28 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { AgentEvent } from '@/lib/useEmergencyTelemetry';
-
-const AGENT_COLORS: Record<string, string> = {
-  Coordinator: 'text-blue-400',
-  AED: 'text-yellow-400',
-  EMS: 'text-red-400',
-  Drone: 'text-cyan-400',
-  Triage: 'text-purple-400',
-  Handoff: 'text-green-400',
-  Voice: 'text-pink-400',
-  Optimizer: 'text-orange-400',
-};
-
-const AGENT_ICONS: Record<string, string> = {
-  Coordinator: '🧠',
-  AED: '⚡',
-  EMS: '🚑',
-  Drone: '🛸',
-  Triage: '🏥',
-  Handoff: '📋',
-  Voice: '🎙️',
-  Optimizer: '📊',
-};
+import { AGENT_COLORS, AGENT_ICONS } from '@/lib/agentColors';
 
 // ── Cluster type for grouping parallel events ──────────────────────────────
 

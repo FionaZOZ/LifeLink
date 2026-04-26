@@ -10,6 +10,7 @@ from shared.protocols import DroneDispatchRequest, DroneDispatchResult
 from shared.chat import enable_chat, extract_text
 from shared.coverage import haversine_distance
 from shared.discovery import register_capability_tags
+from shared.event_bus import publish
 from datasets.ucla_aeds import UCLA_CENTER
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,20 @@ def create_drone_agent(seed: str) -> Agent:
     async def startup(ctx: Context):
         ctx.logger.info(f"Drone agent started: {agent.address}")
         ctx.logger.info(f"Service area: {DRONE_SERVICE_RADIUS_M}m radius around UCLA")
+
+        # Schedule heartbeat every 5 seconds
+        agent.on_interval(period=5.0)(heartbeat)
+
+    async def heartbeat(ctx: Context):
+        """Publish periodic heartbeat to event bus."""
+        await publish(
+            emergency_id="heartbeat",
+            agent="drone",
+            capability="drone-delivery",
+            phase="heartbeat",
+            summary="Drone agent active",
+            data={"address": str(agent.address)}
+        )
 
     @agent.on_message(model=DroneDispatchRequest, replies={DroneDispatchResult})
     async def handle_dispatch(ctx: Context, sender: str, msg: DroneDispatchRequest):

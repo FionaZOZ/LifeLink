@@ -10,6 +10,7 @@ from shared.protocols import OptimizerRequest, OptimizerResult
 from shared.chat import enable_chat, extract_text
 from shared.coverage import coverage_score, haversine_distance
 from shared.discovery import register_capability_tags
+from shared.event_bus import publish
 from datasets.ucla_aeds import UCLA_AEDS, UCLA_CENTER
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,20 @@ def create_optimizer_agent(seed: str) -> Agent:
     @agent.on_event("startup")
     async def startup(ctx: Context):
         ctx.logger.info(f"Optimizer agent started: {agent.address}")
+
+        # Schedule heartbeat every 5 seconds
+        agent.on_interval(period=5.0)(heartbeat)
+
+    async def heartbeat(ctx: Context):
+        """Publish periodic heartbeat to event bus."""
+        await publish(
+            emergency_id="heartbeat",
+            agent="optimizer",
+            capability="aed-optimization",
+            phase="heartbeat",
+            summary="Optimizer agent active",
+            data={"address": str(agent.address)}
+        )
 
     @agent.on_message(model=OptimizerRequest, replies={OptimizerResult})
     async def handle_optimization(ctx: Context, sender: str, msg: OptimizerRequest):

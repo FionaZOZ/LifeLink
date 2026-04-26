@@ -8,6 +8,7 @@ from uagents import Agent, Context
 from shared.protocols import VoiceSyncRequest, VoiceSyncAck
 from shared.chat import enable_chat, extract_text
 from shared.discovery import register_capability_tags
+from shared.event_bus import publish
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +57,35 @@ def create_voice_agent(seed: str) -> Agent:
         else:
             ctx.logger.info("ElevenLabs API key detected")
 
+        # Schedule heartbeat every 5 seconds
+        agent.on_interval(period=5.0)(heartbeat)
+
+    async def heartbeat(ctx: Context):
+        """Publish periodic heartbeat to event bus."""
+        await publish(
+            emergency_id="heartbeat",
+            agent="voice",
+            capability="cpr-narration",
+            phase="heartbeat",
+            summary="Voice agent active",
+            data={"address": str(agent.address)}
+        )
+
     @agent.on_message(model=VoiceSyncRequest, replies={VoiceSyncAck})
     async def handle_sync(ctx: Context, sender: str, msg: VoiceSyncRequest):
         """Handle voice sync requests from Coordinator."""
         ctx.logger.info(f"Voice sync request: step={msg.step}, context={msg.context[:50]}")
+
+        # Publish request event
+        emergency_id = getattr(msg, 'emergency_id', 'unknown')
+        await publish(
+            emergency_id=emergency_id,
+            agent="voice",
+            capability="cpr-narration",
+            phase="request",
+            summary=f"Voice sync requested for step: {msg.step}",
+            data={"step": msg.step, "context": msg.context[:100]}
+        )
 
         session_id = f"voice-{ctx.session}"
 
@@ -69,6 +95,16 @@ def create_voice_agent(seed: str) -> Agent:
                 session_id=session_id,
                 state="speaking" if os.getenv("ELEVENLABS_API_KEY") else "idle",
             ),
+        )
+
+        # Publish result event
+        await publish(
+            emergency_id=emergency_id,
+            agent="voice",
+            capability="cpr-narration",
+            phase="result",
+            summary=f"Voice sync acknowledged: {session_id}",
+            data={"session_id": session_id}
         )
 
     async def chat_handler(ctx: Context, sender: str, msg):

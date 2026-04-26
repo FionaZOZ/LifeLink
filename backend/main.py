@@ -4,6 +4,7 @@ Handles emergency triggers, volunteer notifications, and patient profile handoff
 """
 from datetime import datetime, timezone
 import os
+import time
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
@@ -15,7 +16,10 @@ from twilio.rest import Client
 
 load_dotenv()
 
-app = FastAPI(title="CardiacLink API")
+app = FastAPI(title="CardiacLink API", version="0.2.0")
+
+# Track server start time
+SERVER_START_TIME = time.time()
 
 # Enable CORS for frontend. Keep localhost defaults, but allow overriding for deployment.
 DEFAULT_CORS_ORIGINS = ["http://localhost:3000", "http://localhost:3001"]
@@ -153,6 +157,31 @@ def utc_now_iso() -> str:
 @app.get("/")
 def read_root():
     return {"message": "CardiacLink API", "status": "running"}
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for the backend."""
+    uptime_s = time.time() - SERVER_START_TIME
+
+    # Check Twilio configuration
+    twilio_configured = bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_PHONE_NUMBER)
+
+    # Check Textbelt configuration
+    textbelt_configured = bool(TEXTBELT_API_KEY)
+
+    # Get last emergency timestamp if any
+    last_emergency = emergency_state.get("started_at")
+
+    return {
+        "status": "ok",
+        "version": "0.2.0",
+        "twilio_configured": twilio_configured,
+        "textbelt_configured": textbelt_configured,
+        "uptime_s": round(uptime_s, 2),
+        "last_emergency": last_emergency,
+        "active_emergency": emergency_state.get("active", False),
+    }
 
 
 @app.post("/api/patient/profile")

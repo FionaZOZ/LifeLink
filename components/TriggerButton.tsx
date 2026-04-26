@@ -24,11 +24,10 @@ export function TriggerButton() {
         async (position) => {
           const { latitude, longitude } = position.coords;
 
-          // Create emergency record (Supabase generated types omit emergencies insert)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated Database type
-          const sb = supabase as any;
-          const { data, error } = await sb
+          // Create emergency record
+          const { data, error } = await supabase
             .from('emergencies')
+            // @ts-expect-error Supabase inferred types may not match runtime schema
             .insert({
               patient_lat: latitude,
               patient_lon: longitude,
@@ -37,7 +36,7 @@ export function TriggerButton() {
             .select()
             .single();
 
-          if (error) {
+          if (error || !data) {
             console.error('Error creating emergency:', error);
             toast.error('Failed to trigger emergency');
             setLoading(false);
@@ -45,8 +44,9 @@ export function TriggerButton() {
             toast.error('Failed to trigger emergency');
             setLoading(false);
           } else {
+            const emergencyId = (data as any).id as string;
             toast.success('Emergency triggered!', {
-              description: `Emergency ID: ${data.id.slice(0, 8)}...`,
+              description: `Emergency ID: ${emergencyId.slice(0, 8)}...`,
             });
 
             // Start the agents
@@ -54,7 +54,7 @@ export function TriggerButton() {
               await fetch('/api/emergency/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ emergency_id: data.id }),
+                body: JSON.stringify({ emergency_id: emergencyId }),
               });
             } catch (apiError) {
               console.error('Error starting agents:', apiError);
@@ -74,6 +74,7 @@ export function TriggerButton() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated Database type
           ;(supabase as any)
             .from('emergencies')
+            // @ts-expect-error Supabase inferred types may not match runtime schema
             .insert({
               patient_lat: fallbackLat,
               patient_lon: fallbackLon,
@@ -81,14 +82,15 @@ export function TriggerButton() {
             })
             .select()
             .single()
-            .then(async ({ data, error }: { data: { id: string } | null; error: { message: string } | null }) => {
-              if (error) {
+            .then(async ({ data, error }) => {
+              if (error || !data) {
                 toast.error('Failed to trigger emergency');
                 setLoading(false);
               } else if (!data) {
                 toast.error('Failed to trigger emergency');
                 setLoading(false);
               } else {
+                const emergencyId = (data as any).id as string;
                 toast.success('Emergency triggered at default location!');
 
                 // Start the agents
@@ -96,7 +98,7 @@ export function TriggerButton() {
                   await fetch('/api/emergency/start', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ emergency_id: data.id }),
+                    body: JSON.stringify({ emergency_id: emergencyId }),
                   });
                 } catch (apiError) {
                   console.error('Error starting agents:', apiError);

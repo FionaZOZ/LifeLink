@@ -11,6 +11,7 @@ from uagents import Agent, Context
 from shared.protocols import TriageRequest, TriageResult
 from shared.chat import enable_chat, extract_text
 from shared.discovery import register_capability_tags
+from shared.event_bus import publish
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,20 @@ def create_triage_agent(seed: str) -> Agent:
             ctx.logger.info("Anthropic API key detected")
         else:
             ctx.logger.warning("ANTHROPIC_API_KEY not set -- triage agent in stub mode")
+
+        # Schedule heartbeat every 5 seconds
+        agent.on_interval(period=5.0)(heartbeat)
+
+    async def heartbeat(ctx: Context):
+        """Publish periodic heartbeat to event bus."""
+        await publish(
+            emergency_id="heartbeat",
+            agent="triage",
+            capability="medical-triage",
+            phase="heartbeat",
+            summary="Triage agent active",
+            data={"address": str(agent.address)}
+        )
 
     @agent.on_message(model=TriageRequest, replies={TriageResult})
     async def handle_triage(ctx: Context, sender: str, msg: TriageRequest):
