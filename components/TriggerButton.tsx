@@ -24,9 +24,10 @@ export function TriggerButton() {
         async (position) => {
           const { latitude, longitude } = position.coords;
 
-          // Create emergency record
-          // @ts-ignore - Supabase type inference issue
-          const { data, error } = await supabase
+          // Create emergency record (Supabase generated types omit emergencies insert)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated Database type
+          const sb = supabase as any;
+          const { data, error } = await sb
             .from('emergencies')
             .insert({
               patient_lat: latitude,
@@ -38,6 +39,9 @@ export function TriggerButton() {
 
           if (error) {
             console.error('Error creating emergency:', error);
+            toast.error('Failed to trigger emergency');
+            setLoading(false);
+          } else if (!data) {
             toast.error('Failed to trigger emergency');
             setLoading(false);
           } else {
@@ -67,7 +71,8 @@ export function TriggerButton() {
           const fallbackLat = 33.6405;
           const fallbackLon = -117.8443;
 
-          supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table not in generated Database type
+          ;(supabase as any)
             .from('emergencies')
             .insert({
               patient_lat: fallbackLat,
@@ -76,8 +81,11 @@ export function TriggerButton() {
             })
             .select()
             .single()
-            .then(async ({ data, error }) => {
+            .then(async ({ data, error }: { data: { id: string } | null; error: { message: string } | null }) => {
               if (error) {
+                toast.error('Failed to trigger emergency');
+                setLoading(false);
+              } else if (!data) {
                 toast.error('Failed to trigger emergency');
                 setLoading(false);
               } else {

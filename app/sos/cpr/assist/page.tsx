@@ -7,23 +7,19 @@ import { PatientProfileSheet } from '@/components/lifelink/PatientProfileSheet';
 import { BreathingReassessButton } from '@/components/lifelink/BreathingReassessButton';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { useSerialCPR, type SerialPatientProfile } from '@/lib/cpr/useSerialCPR';
-
-// ── shared constants ──────────────────────────────────────────────────────
-const TARGET_BPM = 110;
-const COMPRESSIONS_PER_CYCLE = 30;
-const COMPRESSION_PHASE_MS = Math.round((COMPRESSIONS_PER_CYCLE * 60_000) / TARGET_BPM); // ≈ 16364
-const BREATH_PHASE_MS = 5000; // 2 breaths × ~2.5s
-const BREATHS_PER_CYCLE = 2;
-const CYCLE_MS = COMPRESSION_PHASE_MS + BREATH_PHASE_MS;
-
-const DEPTH_MIN = 0, DEPTH_MAX = 7;
-const IDEAL_LO = 5.0, IDEAL_HI = 6.0;
-const pct = (v: number) => ((v - DEPTH_MIN) / (DEPTH_MAX - DEPTH_MIN)) * 100;
-
-// Map sensor voltage (0–5V on RP-S40-ST) to compression depth (0–7cm).
-function voltageToDepth(v: number) {
-  return Math.max(0, Math.min(DEPTH_MAX, v * 1.4));
-}
+import {
+  TARGET_BPM,
+  COMPRESSIONS_PER_CYCLE,
+  BREATHS_PER_CYCLE,
+  derivePhase,
+  voltageToDepth,
+  pct,
+  IDEAL_LO,
+  IDEAL_HI,
+  type PhaseInfo,
+} from '@/lib/cpr/cprAssistPhase';
+import { useCompressionRateBpm } from '@/lib/cpr/useCompressionRateBpm';
+import { useCprElevenLabsVoice } from '@/lib/voice/useCprElevenLabsVoice';
 
 function fmtMmSs(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -52,39 +48,55 @@ const HW_CUES_OK = [
   '"Strong compressions — don\'t stop."',
 ];
 
-// ── 30:2 phase derivation ─────────────────────────────────────────────────
-type PhaseInfo = {
-  cyclesCompleted: number;
-  phase: 'PUSH' | 'BREATHE';
-  phaseProgress: number;          // 0..1
-  compressionInCycle: number;      // 1..30 during PUSH, =30 during BREATHE
-  breathInCycle: number;           // 0 during PUSH, 1..2 during BREATHE
-  totalCompressions: number;       // cumulative
+type VoiceCoachProps = {
+  configured: boolean | null;
+  enabled: boolean;
+  onToggle: () => void;
+  error: string | null;
 };
 
-function derivePhase(elapsedMs: number): PhaseInfo {
-  if (elapsedMs <= 0) {
-    return { cyclesCompleted: 0, phase: 'PUSH', phaseProgress: 0, compressionInCycle: 1, breathInCycle: 0, totalCompressions: 0 };
-  }
-  const cyclesCompleted = Math.floor(elapsedMs / CYCLE_MS);
-  const inCycle = elapsedMs % CYCLE_MS;
-  if (inCycle < COMPRESSION_PHASE_MS) {
-    const progress = inCycle / COMPRESSION_PHASE_MS;
-    const compressionInCycle = Math.min(COMPRESSIONS_PER_CYCLE, Math.floor(progress * COMPRESSIONS_PER_CYCLE) + 1);
-    return {
-      cyclesCompleted, phase: 'PUSH', phaseProgress: progress,
-      compressionInCycle, breathInCycle: 0,
-      totalCompressions: cyclesCompleted * COMPRESSIONS_PER_CYCLE + compressionInCycle - 1,
-    };
-  }
-  const breathElapsed = inCycle - COMPRESSION_PHASE_MS;
-  const progress = breathElapsed / BREATH_PHASE_MS;
-  const breathInCycle = Math.min(BREATHS_PER_CYCLE, Math.floor(progress * BREATHS_PER_CYCLE) + 1);
-  return {
-    cyclesCompleted, phase: 'BREATHE', phaseProgress: progress,
-    compressionInCycle: COMPRESSIONS_PER_CYCLE, breathInCycle,
-    totalCompressions: cyclesCompleted * COMPRESSIONS_PER_CYCLE + COMPRESSIONS_PER_CYCLE,
-  };
+function VoiceCoachRow({ configured, enabled, onToggle, error }: VoiceCoachProps) {
+  const ready = configured === true;
+  const label = configured === null ? 'Voice coach · …' : configured === false ? 'Voice coach · not configured' : enabled ? 'Voice coach · ON' : 'Voice coach · OFF';
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={!ready}
+        style={{
+          all: 'unset',
+          cursor: ready ? 'pointer' : 'default',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 12px',
+          width: '100%',
+          boxSizing: 'border-box',
+          borderRadius: 10,
+          background: ready ? (enabled ? 'rgba(31,138,77,0.2)' : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.05)',
+          border: `1px solid ${ready ? (enabled ? 'rgba(31,138,77,0.45)' : 'rgba(255,255,255,0.15)') : 'rgba(255,255,255,0.1)'}`,
+          color: '#fff',
+          fontSize: 11,
+          fontFamily: FONT.mono,
+          letterSpacing: 1.1,
+          fontWeight: 700,
+          opacity: ready ? 1 : 0.65,
+        }}
+      >
+        <Icon name="volume" size={14} color="#fff" stroke={2}/>
+        <span style={{ flex: 1 }}>{label}</span>
+        {!ready && configured === false && (
+          <span style={{ fontSize: 9, opacity: 0.75, fontWeight: 600 }}>.env.local</span>
+        )}
+      </button>
+      {error && (
+        <div style={{ marginTop: 6, fontSize: 10, fontFamily: FONT.mono, color: X.RED, opacity: 0.95 }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── PATCH BANNER (shared between both layouts) ────────────────────────────
@@ -319,6 +331,20 @@ export default function CPRAssistPage() {
   }, []);
   const elapsedMs = startRef.current ? Date.now() - startRef.current : 0;
 
+  const phase = derivePhase(elapsedMs);
+  const depthCm = connected && cpr.lastSample ? voltageToDepth(cpr.lastSample.voltage) : null;
+  const hwCount = connected ? (cpr.lastSample?.count ?? 0) : 0;
+  const hardwareBpm = useCompressionRateBpm(hwCount);
+
+  const [voiceOn, setVoiceOn] = React.useState(false);
+  const voice = useCprElevenLabsVoice({
+    phase,
+    hardwareActive: connected,
+    depthCm,
+    hardwareBpm: connected ? hardwareBpm : null,
+    voiceEnabledByUser: voiceOn,
+  });
+
   // Effective patient profile: prefer Arduino-supplied data, fall back to the
   // hardcoded demo profile the instant the patch starts streaming.
   const effective = useEffectiveProfile(cpr);
@@ -329,8 +355,8 @@ export default function CPRAssistPage() {
   return (
     <>
       {connected
-        ? <HardwareLayout cpr={cpr} elapsedMs={elapsedMs} effectiveProfile={effective.profile} isFallbackProfile={effective.isFallback} onOpenProfile={sheet.openManually}/>
-        : <PhoneOnlyLayout cpr={cpr} elapsedMs={elapsedMs} effectiveProfile={effective.profile} isFallbackProfile={effective.isFallback} onOpenProfile={sheet.openManually}/>
+        ? <HardwareLayout cpr={cpr} elapsedMs={elapsedMs} effectiveProfile={effective.profile} isFallbackProfile={effective.isFallback} onOpenProfile={sheet.openManually} voiceCoach={{ configured: voice.configured, enabled: voiceOn, onToggle: () => setVoiceOn((v) => !v), error: voice.lastError }}/>
+        : <PhoneOnlyLayout cpr={cpr} elapsedMs={elapsedMs} effectiveProfile={effective.profile} isFallbackProfile={effective.isFallback} onOpenProfile={sheet.openManually} voiceCoach={{ configured: voice.configured, enabled: voiceOn, onToggle: () => setVoiceOn((v) => !v), error: voice.lastError }}/>
       }
       <PatientProfileSheet
         profile={effective.profile}
@@ -349,7 +375,7 @@ export default function CPRAssistPage() {
 // (~16.4s) → 2 breaths (~5s) → repeat. Compression count auto-increments
 // based on the assumption that the user is matching the metronome.
 // ───────────────────────────────────────────────────────────────────────────
-function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, onOpenProfile }: { cpr: Cpr; elapsedMs: number; effectiveProfile?: SerialPatientProfile | null; isFallbackProfile?: boolean; onOpenProfile?: () => void }) {
+function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, onOpenProfile, voiceCoach }: { cpr: Cpr; elapsedMs: number; effectiveProfile?: SerialPatientProfile | null; isFallbackProfile?: boolean; onOpenProfile?: () => void; voiceCoach: VoiceCoachProps }) {
   const phase = derivePhase(elapsedMs);
   const isPush = phase.phase === 'PUSH';
   const cycleNum = phase.cyclesCompleted + 1;
@@ -363,6 +389,7 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
     <Screen bg={X.DARK} padTop={0}>
       <EmergencyBanner/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
+        <VoiceCoachRow {...voiceCoach}/>
         <PatchBanner cpr={cpr} connected={false} effectiveProfile={effectiveProfile} isFallbackProfile={isFallbackProfile} onOpenProfile={onOpenProfile}/>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -423,30 +450,10 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
 // ───────────────────────────────────────────────────────────────────────────
 // LAYOUT B — LifeLink Patch connected. Sensor drives depth bar + beat scale.
 // ───────────────────────────────────────────────────────────────────────────
-function useRateFromCount(count: number) {
-  const [rate, setRate] = React.useState<number | null>(null);
-  const samples = React.useRef<number[]>([]);
-  const lastCount = React.useRef(0);
-  React.useEffect(() => {
-    if (count > lastCount.current) {
-      samples.current.push(Date.now());
-      const cutoff = Date.now() - 6000;
-      while (samples.current.length && samples.current[0] < cutoff) samples.current.shift();
-      lastCount.current = count;
-      if (samples.current.length >= 2) {
-        const span = samples.current[samples.current.length - 1] - samples.current[0];
-        const bpm = span > 0 ? Math.round((samples.current.length - 1) * 60000 / span) : null;
-        setRate(bpm);
-      }
-    }
-  }, [count]);
-  return rate;
-}
-
-function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, onOpenProfile }: { cpr: Cpr; elapsedMs: number; effectiveProfile?: SerialPatientProfile | null; isFallbackProfile?: boolean; onOpenProfile?: () => void }) {
+function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, onOpenProfile, voiceCoach }: { cpr: Cpr; elapsedMs: number; effectiveProfile?: SerialPatientProfile | null; isFallbackProfile?: boolean; onOpenProfile?: () => void; voiceCoach: VoiceCoachProps }) {
   const liveDepth = cpr.lastSample ? voltageToDepth(cpr.lastSample.voltage) : 0;
   const liveCount = cpr.lastSample?.count ?? 0;
-  const liveRate = useRateFromCount(cpr.lastSample?.count ?? 0);
+  const liveRate = useCompressionRateBpm(cpr.lastSample?.count ?? 0);
   const displayedRate = liveRate ?? 0;
   const inBand = liveDepth >= IDEAL_LO && liveDepth <= IDEAL_HI;
   const depthColor = inBand ? X.GREEN : (liveDepth < IDEAL_LO ? X.AMBER : X.RED);
@@ -475,6 +482,7 @@ function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, o
     <Screen bg={X.DARK} padTop={0}>
       <EmergencyBanner/>
       <div style={{ padding: '70px 18px 0', color: '#fff' }}>
+        <VoiceCoachRow {...voiceCoach}/>
         <PatchBanner cpr={cpr} connected={true} effectiveProfile={effectiveProfile} isFallbackProfile={isFallbackProfile} onOpenProfile={onOpenProfile}/>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
