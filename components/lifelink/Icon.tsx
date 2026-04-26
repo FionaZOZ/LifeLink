@@ -6,7 +6,8 @@ type IconName =
   | 'home' | 'message' | 'user' | 'bell' | 'shield' | 'zap' | 'mic'
   | 'volume' | 'clock' | 'compass' | 'plus' | 'minus' | 'cross'
   | 'aed' | 'walk' | 'shuffle' | 'siren' | 'plug' | 'qr' | 'activity'
-  | 'pip' | 'globe';
+  | 'pip' | 'globe'
+  | 'door' | 'pill' | 'wind' | 'watch' | 'lock-open' | 'alert';
 
 type Props = {
   name: IconName;
@@ -105,6 +106,18 @@ export function Icon({ name, size = 24, color = 'currentColor', stroke = 1.8, fi
       return <svg {...svgProps}><rect x="3" y="3" width="13" height="13" rx="2"/><rect x="10" y="10" width="11" height="11" rx="2"/></svg>;
     case 'globe':
       return <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></svg>;
+    case 'door':
+      return <svg {...svgProps}><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16"/><line x1="2" y1="21" x2="22" y2="21"/><circle cx="15" cy="13" r="0.6" fill={color}/></svg>;
+    case 'pill':
+      return <svg {...svgProps}><path d="M10.5 20.5a4.95 4.95 0 0 1-7-7l9-9a4.95 4.95 0 0 1 7 7z"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/></svg>;
+    case 'wind':
+      return <svg {...svgProps}><path d="M9.59 4.59A2 2 0 1 1 11 8H2"/><path d="M17.73 4.82A3 3 0 1 1 19 9H2"/><path d="M12.79 19.18A2.5 2.5 0 1 0 14.5 15H2"/></svg>;
+    case 'watch':
+      return <svg {...svgProps}><circle cx="12" cy="12" r="6"/><polyline points="12 10 12 12 13.5 13.5"/><path d="M16.51 17.35l-.35 3.83a2 2 0 0 1-2 1.82H9.83a2 2 0 0 1-2-1.82l-.35-3.83m.01-10.7l.35-3.83A2 2 0 0 1 9.83 1h4.35a2 2 0 0 1 2 1.82l.35 3.83"/></svg>;
+    case 'lock-open':
+      return <svg {...svgProps}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>;
+    case 'alert':
+      return <svg {...svgProps}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
     default:
       return <svg {...svgProps}><circle cx="12" cy="12" r="10"/></svg>;
   }

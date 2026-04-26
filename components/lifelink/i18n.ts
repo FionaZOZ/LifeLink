@@ -182,6 +182,8 @@ const DICT: Record<string, Record<Lang, string>> = {
   'home.pat.contactsSub.short':   { en: '3 people in call order', zh: '3 人按顺序呼叫' },
   'home.pat.someoneNeeds':        { en: 'SOMEONE ELSE NEEDS HELP?', zh: '其他人需要帮助？' },
   'home.pat.startForThem':        { en: 'Start an emergency for them →', zh: '为他们发起紧急呼救 →' },
+  'home.pat.alone':               { en: 'I\'M ALONE — NEED HELP', zh: '我一个人 — 需要帮助' },
+  'home.pat.aloneSub':            { en: 'Self-rescue · auto-call 911 + alert nearby helpers', zh: '自救 · 自动呼叫 911 + 通知附近响应者' },
   'home.aria.startEmergency':     { en: 'Start emergency — press and hold for 1.5 seconds', zh: '发起紧急 — 按住 1.5 秒' },
 
   // ── profile / sections ─────────────────────────────────────────────────
@@ -566,6 +568,104 @@ const DICT: Record<string, Record<Lang, string>> = {
   'pat.hw.row.adhesive.val':{ en: 'Replace in 4 days', zh: '4 天后更换' },
   'pat.hw.row.firmware':   { en: 'Firmware',       zh: '固件' },
   'pat.hw.row.firmware.val':{ en: 'Up to date',    zh: '已是最新' },
+
+  // ── patient / self-rescue ─────────────────────────────────────────────
+  'sr.banner':                { en: 'SOS · SELF-RESCUE · {time}',    zh: 'SOS · 自救 · {time}' },
+  'sr.banner.alone':          { en: 'ALONE',                         zh: '独自' },
+  'sr.intro':                 { en: 'We\'ve notified emergency services and nearby volunteers. Follow the steps below until help arrives.', zh: '我们已通知急救与附近响应者。在帮助到达前请跟随下方步骤。' },
+
+  // Scenarios — picker + status kicker + title + rhythm copy + steps
+  'sr.scen.cardiac.label':    { en: 'Cardiac event',                 zh: '心脏事件' },
+  'sr.scen.cardiac.kicker':   { en: 'CARDIAC EVENT · YOU ARE ALONE', zh: '心脏事件 · 独自一人' },
+  'sr.scen.cardiac.title':    { en: 'Stay calm. Help is on the way.', zh: '保持冷静，帮助正在赶来。' },
+  'sr.scen.cardiac.rhythm':   { en: 'Cough-CPR rhythm',              zh: '咳嗽 CPR 节奏' },
+  'sr.scen.cardiac.rhythmSub':{ en: 'Force a cough every 2 sec to keep blood moving', zh: '每 2 秒用力咳嗽一次，帮助血液循环' },
+  'sr.scen.cardiac.beat.title': { en: 'COUGH',                       zh: '咳嗽' },
+  'sr.scen.cardiac.beat.sub':   { en: 'HARD · DEEP',                 zh: '用力 · 深咳' },
+  'sr.scen.cardiac.step1.t':  { en: 'Unlock the front door',         zh: '打开前门' },
+  'sr.scen.cardiac.step1.s':  { en: 'Tap to send a smart-lock unlock so EMS can enter', zh: '点击解锁智能门锁，让急救人员进入' },
+  'sr.scen.cardiac.step2.t':  { en: 'Chew one aspirin (325 mg)',     zh: '嚼服一片阿司匹林（325 mg）' },
+  'sr.scen.cardiac.step2.s':  { en: 'Only if not allergic and you have it within reach', zh: '前提是你不过敏且手边有' },
+  'sr.scen.cardiac.step3.t':  { en: 'Sit upright, back against wall', zh: '坐直，背靠墙' },
+  'sr.scen.cardiac.step3.s':  { en: 'Do NOT lie flat. Knees bent, breathe slowly.', zh: '切勿平躺。屈膝，慢慢呼吸。' },
+
+  'sr.scen.choking.label':    { en: 'Choking',                       zh: '窒息' },
+  'sr.scen.choking.kicker':   { en: 'CHOKING · YOU ARE ALONE',       zh: '窒息 · 独自一人' },
+  'sr.scen.choking.title':    { en: 'Self Heimlich — keep going.',   zh: '自我海姆立克 — 不要停。' },
+  'sr.scen.choking.rhythm':   { en: 'Self-Heimlich rhythm',          zh: '自我海姆立克节奏' },
+  'sr.scen.choking.rhythmSub':{ en: 'Press fist into a chair-back, thrust upward each beat', zh: '将拳头压在椅背上，每拍向上猛推' },
+  'sr.scen.choking.beat.title': { en: 'THRUST',                      zh: '猛推' },
+  'sr.scen.choking.beat.sub':   { en: 'INWARD · UPWARD',             zh: '向内 · 向上' },
+  'sr.scen.choking.step1.t':  { en: 'Unlock the front door',         zh: '打开前门' },
+  'sr.scen.choking.step1.s':  { en: 'Smart-lock unlock prepared for EMS arrival', zh: '智能门锁已准备解锁，等待急救到达' },
+  'sr.scen.choking.step2.t':  { en: 'Lean over a sturdy chair-back', zh: '俯身压在结实的椅背上' },
+  'sr.scen.choking.step2.s':  { en: 'Drive your upper abdomen down onto the edge', zh: '把上腹部用力压在椅背边缘' },
+  'sr.scen.choking.step3.t':  { en: 'If it clears, keep call open',  zh: '如已通畅，保持通话不挂断' },
+  'sr.scen.choking.step3.s':  { en: 'Dispatcher needs to confirm airway is open', zh: '调度员需要确认气道已通畅' },
+
+  'sr.scen.bleeding.label':   { en: 'Severe bleeding',               zh: '严重出血' },
+  'sr.scen.bleeding.kicker':  { en: 'SEVERE BLEEDING · YOU ARE ALONE', zh: '严重出血 · 独自一人' },
+  'sr.scen.bleeding.title':   { en: 'Apply pressure. Don\'t let go.', zh: '保持按压，不要松手。' },
+  'sr.scen.bleeding.rhythm':  { en: 'Direct-pressure timer',         zh: '直接按压计时' },
+  'sr.scen.bleeding.rhythmSub':{ en: 'Press hard with both hands. Hold ≥ 10 minutes.', zh: '双手用力按压。至少持续 10 分钟。' },
+  'sr.scen.bleeding.step1.t': { en: 'Unlock the front door',         zh: '打开前门' },
+  'sr.scen.bleeding.step1.s': { en: 'Tap to send a smart-lock unlock so EMS can enter', zh: '点击解锁智能门锁，让急救人员进入' },
+  'sr.scen.bleeding.step2.t': { en: 'Pack the wound with cloth',     zh: '用布料填塞伤口' },
+  'sr.scen.bleeding.step2.s': { en: 'Towel, t-shirt — anything clean. Then press.', zh: '毛巾、T 恤——任何干净布料。然后用力按压。' },
+  'sr.scen.bleeding.step3.t': { en: 'Lie down, raise the wound',     zh: '躺下，抬高伤口' },
+  'sr.scen.bleeding.step3.s': { en: 'Above heart level if possible. Keep warm.', zh: '尽量高于心脏。保持温暖。' },
+
+  // Scenario picker (entry from home / inline)
+  'sr.picker.section':        { en: 'WHAT\'S HAPPENING',             zh: '发生了什么' },
+
+  // Auto-dispatch countdown overlay
+  'sr.countdown.label':       { en: 'AUTO-DISPATCH IN {n}s',         zh: '自动派遣倒计时 {n} 秒' },
+  'sr.countdown.title':       { en: 'We\'ll call 911 and alert nearby helpers', zh: '我们将呼叫 911 并通知附近响应者' },
+  'sr.countdown.body':        { en: 'Detected: {scenario}. You appear to be alone. Tap cancel only if this was triggered by mistake.', zh: '检测到：{scenario}。你看起来独自一人。仅当误触发时才点击取消。' },
+  'sr.countdown.triggerNow':  { en: 'Trigger now',                   zh: '立即派遣' },
+  'sr.countdown.cancel':      { en: 'I\'m OK · cancel',              zh: '我没事 · 取消' },
+
+  // Live dispatch card
+  'sr.disp.dialing':          { en: 'Auto-calling 911…',             zh: '正在自动呼叫 911…' },
+  'sr.disp.dialing.sub':      { en: 'Pre-recorded statement will play', zh: '将播放预录制语音' },
+  'sr.disp.dialing.tag':      { en: 'DIALING',                       zh: '拨号中' },
+  'sr.disp.connected':        { en: '911 connected · live audio open', zh: '911 已接通 · 实时音频开启' },
+  'sr.disp.connected.sub':    { en: 'Dispatcher · Orange County · Unit 47 dispatched', zh: '调度员 · Orange County · 47 队已派遣' },
+  'sr.disp.connected.tag':    { en: 'LIVE',                          zh: '实时' },
+  'sr.disp.helpersAlerting':  { en: '— alerting nearby helpers',     zh: '— 正在通知附近响应者' },
+  'sr.disp.helperOne':        { en: '{n} helper alerted',            zh: '已通知 {n} 名响应者' },
+  'sr.disp.helpersMany':      { en: '{n} helpers alerted',           zh: '已通知 {n} 名响应者' },
+  'sr.disp.helpersWaiting':   { en: 'Within 800 m radius · CPR-certified', zh: '800 米半径内 · CPR 认证' },
+  'sr.disp.closest':          { en: 'Closest · Maya K. · ETA {n} min', zh: '最近 · Maya K. · 预计 {n} 分钟' },
+  'sr.disp.address':          { en: '3200 California Ave · Apt 4B',  zh: '加州大道 3200 号 · 4B 单元' },
+  'sr.disp.gps':              { en: '33.6846° N, −117.8265° W · ±4 m', zh: '33.6846° N, −117.8265° W · ±4 米' },
+
+  // Vitals strip
+  'sr.vitals.hr':             { en: 'APPLE WATCH · HR',              zh: 'APPLE WATCH · 心率' },
+  'sr.vitals.hr.unit':        { en: 'BPM',                           zh: '次/分' },
+  'sr.vitals.hr.high':        { en: '↑ HIGH',                        zh: '↑ 偏高' },
+  'sr.vitals.spo2':           { en: 'SpO₂ · BLOOD OX',               zh: 'SpO₂ · 血氧' },
+  'sr.vitals.spo2.low':       { en: 'LOW',                           zh: '偏低' },
+
+  // Rhythm card
+  'sr.rhythm.kicker':         { en: 'RHYTHM · DO IT NOW',            zh: '节奏 · 现在就做' },
+  'sr.rhythm.bpm':            { en: '{n}/MIN',                       zh: '{n}/分' },
+  'sr.rhythm.coughCount':     { en: 'COUGHS · {n}',                  zh: '咳嗽 · {n}' },
+  'sr.rhythm.thrustCount':    { en: 'THRUSTS · {n}',                 zh: '推压 · {n}' },
+  'sr.rhythm.voiceOn':        { en: 'VOICE ON',                      zh: '语音开' },
+  'sr.rhythm.voiceOff':       { en: 'SILENT',                        zh: '静音' },
+  'sr.rhythm.targetSuffix':   { en: '/ 10:00 TARGET',                zh: '/ 10:00 目标' },
+
+  // Checklist
+  'sr.checklist':             { en: 'PREPARE FOR EMS · TAP WHEN DONE', zh: '为急救做准备 · 完成后点击' },
+
+  // Dispatcher speakerphone banner
+  'sr.speaker.title':         { en: 'Speakerphone open with dispatcher', zh: '调度员免提通话已开启' },
+  'sr.speaker.sub':           { en: 'Hands-free · they can hear you breathing', zh: '免提 · 他们能听到你的呼吸' },
+
+  // Bottom CTAs
+  'sr.cta.map':               { en: 'Live map',                      zh: '实时地图' },
+  'sr.cta.endSos':            { en: 'I made it · End SOS',           zh: '我没事了 · 结束 SOS' },
 
   // ── call screen ───────────────────────────────────────────────────────
   'call.calling':          { en: 'CALLING…',       zh: '呼叫中…' },

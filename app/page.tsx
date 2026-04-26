@@ -212,7 +212,12 @@ function HomePatient() {
         <Icon name="chevron-right" size={18} color={X.INK3} stroke={2}/>
       </Link>
 
-      <Link href="/sos" style={{ textDecoration: 'none', display: 'block', margin: '14px 22px 0', padding: 16, borderRadius: 16, background: X.RED_BG, border: `1px solid ${X.RED}33` }}>
+      <Link href="/patient/self-rescue" style={{ textDecoration: 'none', display: 'block', margin: '14px 22px 0', padding: 16, borderRadius: 16, background: X.RED, border: `1px solid ${X.RED_DEEP}`, boxShadow: '0 8px 24px rgba(225,29,46,0.28)' }}>
+        <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: '#fff', fontWeight: 800, opacity: 0.92 }}>{t('home.pat.alone')}</div>
+        <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, color: '#fff' }}>{t('home.pat.aloneSub')}</div>
+      </Link>
+
+      <Link href="/sos" style={{ textDecoration: 'none', display: 'block', margin: '10px 22px 0', padding: 16, borderRadius: 16, background: X.RED_BG, border: `1px solid ${X.RED}33` }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.RED, fontWeight: 700 }}>{t('home.pat.someoneNeeds')}</div>
         <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, color: X.INK }}>{t('home.pat.startForThem')}</div>
       </Link>

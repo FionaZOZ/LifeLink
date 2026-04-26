@@ -101,6 +101,10 @@ export function EmergencyBanner({ time, endHref = '/sos/complete' }: { time?: st
       left: 0, right: 0,
       background: X.RED, color: '#fff',
       padding: 'var(--ll-safe-top, 14px) 12px 8px',
+      // Match .ll-stage's border-radius (44px) so the banner stays inside the
+      // rounded screen even if the stage's overflow-hidden clipping fails to
+      // repaint cleanly during scroll/layout shifts (intermittent browser bug).
+      borderTopLeftRadius: 44, borderTopRightRadius: 44,
       display: 'flex', alignItems: 'center',
       gap: 8, zIndex: 10,
     }}>
