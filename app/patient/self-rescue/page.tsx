@@ -6,6 +6,7 @@ import { Screen } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { useT } from '@/components/lifelink/i18n';
+import { markDispatchConfirmed, startSosTimer } from '@/components/lifelink/sosTimer';
 
 type Scenario = 'cardiac' | 'choking' | 'bleeding';
 
@@ -494,6 +495,15 @@ export default function SelfRescuePage() {
   React.useEffect(() => {
     const id = setInterval(() => setElapsed(e => e + 1), 1000);
     return () => clearInterval(id);
+  }, []);
+
+  // Activate the global SOS / dispatch state so the cross-page volunteer
+  // accept toast (HelperToast) and other dispatch-driven UI fire on the
+  // alone-and-conscious flow too — without this the toast was silent here
+  // because the patient never went through /sos/dispatch/*.
+  React.useEffect(() => {
+    startSosTimer();
+    markDispatchConfirmed();
   }, []);
 
   // 5 s auto-dispatch countdown on mount + when scenario changes, then a brief
