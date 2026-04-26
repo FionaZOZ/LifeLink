@@ -151,6 +151,18 @@
   60%  { transform: scale(1.06); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
+@keyframes ll-slide-up-fade {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ll-sheet-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes ll-backdrop-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
 .ll-pulse-dot { animation: ll-pulse 1.2s ease-in-out infinite; }
 .ll-blink { animation: ll-blink 0.9s steps(2, end) infinite; }
@@ -160,6 +172,25 @@
    mockup clean. Scrolling still works via touch / wheel / keyboard. */
 .ll-scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .ll-scroll-hide::-webkit-scrollbar { display: none; }
+
+/* Per-page enter transition (driven by app/template.tsx remounting on route
+   change). Tuned to be barely-perceptible: 160ms ease-out fade + 4px slide so
+   navigations feel smooth without ever drawing attention to the transition
+   itself. Honor reduced-motion. */
+@keyframes ll-page-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ll-page-enter {
+  position: absolute;
+  inset: 0;
+  animation: ll-page-enter 160ms ease-out;
+  /* Repaint optimization: hint that opacity + transform are about to change. */
+  will-change: opacity, transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ll-page-enter { animation: none; }
+}
 
 /* Mobile / short-laptop default — flush full-viewport, no phone-in-phone, no safe area. */
 .ll-phone-shell {

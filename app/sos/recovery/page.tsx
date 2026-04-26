@@ -62,7 +62,12 @@ export default function RecoveryPage() {
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>
 
-      <div style={{ padding: '70px 22px 140px' }}>
+      <div className="ll-scroll-hide" style={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 140,
+        overflowY: 'auto',
+        padding: '70px 22px 24px',
+        boxSizing: 'border-box',
+      }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.GREEN, letterSpacing: 1.4, fontWeight: 700 }}>{t('sos.rec.statusLabel')}</div>
         <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05, whiteSpace: 'pre-line' }}>
           {t('sos.rec.title')}

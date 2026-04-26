@@ -487,7 +487,12 @@ export default function CPRAssistPage() {
         <div
           style={{
             position: 'absolute',
-            inset: 0,
+            // Bleed up under the iPhone Dynamic Island so the overlay covers
+            // the EmergencyBanner and the safe-top area, not just .ll-stage-safe.
+            top: 'calc(0px - var(--ll-safe-top, 0px))',
+            left: 0,
+            right: 0,
+            bottom: 0,
             zIndex: 9998,
             background: 'rgba(0,0,0,0.88)',
             display: 'flex',

@@ -117,6 +117,7 @@ export function CprSessionFooter({
           background: 'rgba(232,133,44,0.15)',
           border: `1.5px solid ${X.AMBER}`,
           color: X.AMBER,
+          animation: 'll-slide-up-fade 360ms ease-out 80ms both',
         }}
       >
         <Icon name="pulse" size={14} color={X.AMBER} stroke={2.2} />
@@ -130,6 +131,7 @@ export function CprSessionFooter({
           background: 'rgba(44,102,232,0.18)',
           border: `1.5px solid ${X.BLUE}`,
           color: '#fff',
+          animation: 'll-slide-up-fade 360ms ease-out 200ms both',
         }}
       >
         <Icon name="phone" size={14} color="#fff" stroke={2.2} />
@@ -195,6 +197,7 @@ export function AedGuideModal({
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
+        animation: 'll-backdrop-fade-in 220ms ease-out',
       }}
     >
       <div
@@ -209,6 +212,8 @@ export function AedGuideModal({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          animation: 'll-sheet-slide-up 320ms cubic-bezier(0.32, 0.72, 0.24, 1)',
+          willChange: 'transform',
         }}
       >
         {/* Drag handle */}
@@ -380,6 +385,7 @@ export function AmbulanceSummaryModal({
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
+        animation: 'll-backdrop-fade-in 220ms ease-out',
       }}
     >
       <div
@@ -394,6 +400,8 @@ export function AmbulanceSummaryModal({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          animation: 'll-sheet-slide-up 320ms cubic-bezier(0.32, 0.72, 0.24, 1)',
+          willChange: 'transform',
         }}
       >
         {/* Drag handle */}

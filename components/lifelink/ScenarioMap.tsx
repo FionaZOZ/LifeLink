@@ -31,15 +31,6 @@ const milesToMeters = (miles: number) => miles * 1609.34;
 export function ScenarioMap({ scenarioId, events }: ScenarioMapProps) {
   const scenario = SCENARIOS[scenarioId];
 
-  // Track agent states from events
-  const agentStates = React.useMemo(() => {
-    const states: Record<string, { phase: string; timestamp: number }> = {};
-    events.forEach((e, idx) => {
-      states[e.agent] = { phase: e.phase, timestamp: idx };
-    });
-    return states;
-  }, [events]);
-
   const completedAgents = React.useMemo(() => {
     const completed = new Set<string>();
     events.forEach(e => {
@@ -49,97 +40,6 @@ export function ScenarioMap({ scenarioId, events }: ScenarioMapProps) {
     });
     return completed;
   }, [events]);
-
-  // Animated positions for helpers and EMS
-  const [animatedPositions, setAnimatedPositions] = React.useState<Record<string, { lat: number; lon: number }>>({});
-
-  React.useEffect(() => {
-    const animationFrames: number[] = [];
-    const startedAnimations = new Set<string>();
-
-    // Animate helpers moving toward patient when they have events
-    scenario.helpers.forEach(helper => {
-      const helperState = agentStates[helper.id];
-      if (helperState && helperState.phase === 'working' && !startedAnimations.has(helper.id)) {
-        startedAnimations.add(helper.id);
-
-        const startLat = helper.lat;
-        const startLon = helper.lon;
-        const endLat = scenario.patient.lat;
-        const endLon = scenario.patient.lon;
-        const duration = 3000; // 3 seconds to reach patient
-        const startTime = performance.now();
-
-        const animate = (currentTime: number) => {
-          const elapsed = currentTime - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-
-          // Ease-in-out function
-          const eased = progress < 0.5
-            ? 2 * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-
-          const currentLat = startLat + (endLat - startLat) * eased;
-          const currentLon = startLon + (endLon - startLon) * eased;
-
-          setAnimatedPositions(prev => ({
-            ...prev,
-            [helper.id]: { lat: currentLat, lon: currentLon },
-          }));
-
-          if (progress < 1) {
-            const frameId = requestAnimationFrame(animate);
-            animationFrames.push(frameId);
-          }
-        };
-
-        const frameId = requestAnimationFrame(animate);
-        animationFrames.push(frameId);
-      }
-    });
-
-    // Animate EMS
-    const emsState = agentStates['ems'];
-    if (emsState && emsState.phase === 'working' && !startedAnimations.has('ems')) {
-      startedAnimations.add('ems');
-
-      const startLat = scenario.ems.lat;
-      const startLon = scenario.ems.lon;
-      const endLat = scenario.patient.lat;
-      const endLon = scenario.patient.lon;
-      const duration = 4000; // 4 seconds for EMS
-      const startTime = performance.now();
-
-      const animate = (currentTime: number) => {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-
-        const eased = progress < 0.5
-          ? 2 * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-
-        const currentLat = startLat + (endLat - startLat) * eased;
-        const currentLon = startLon + (endLon - startLon) * eased;
-
-        setAnimatedPositions(prev => ({
-          ...prev,
-          ems: { lat: currentLat, lon: currentLon },
-        }));
-
-        if (progress < 1) {
-          const frameId = requestAnimationFrame(animate);
-          animationFrames.push(frameId);
-        }
-      };
-
-      const frameId = requestAnimationFrame(animate);
-      animationFrames.push(frameId);
-    }
-
-    return () => {
-      animationFrames.forEach(id => cancelAnimationFrame(id));
-    };
-  }, [agentStates, scenario.helpers, scenario.ems, scenario.patient]);
 
   // Generate coverage rings around patient location
   const coverageRings = React.useMemo(() => {
@@ -278,15 +178,13 @@ export function ScenarioMap({ scenarioId, events }: ScenarioMapProps) {
 
         {/* Helper markers */}
         {scenario.helpers.map(helper => {
-          const pos = animatedPositions[helper.id] || { lat: helper.lat, lon: helper.lon };
-          const isMoving = agentStates[helper.id]?.phase === 'working';
           const hasArrived = completedAgents.has(helper.id);
 
           return (
             <Marker
               key={helper.id}
-              latitude={pos.lat}
-              longitude={pos.lon}
+              latitude={helper.lat}
+              longitude={helper.lon}
               anchor="center"
             >
               <div style={{
@@ -295,15 +193,13 @@ export function ScenarioMap({ scenarioId, events }: ScenarioMapProps) {
                 borderRadius: '50%',
                 background: hasArrived ? '#10b981' : helper.color,
                 border: '3px solid white',
-                boxShadow: isMoving ? '0 4px 12px rgba(0,0,0,0.4)' : '0 2px 6px rgba(0,0,0,0.25)',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
                 fontSize: '12px',
                 fontWeight: 700,
-                transform: isMoving ? 'scale(1.1)' : 'scale(1)',
-                transition: 'all 0.3s ease',
               }}>
                 {helper.name[0]}
                 {hasArrived && (
@@ -380,14 +276,12 @@ export function ScenarioMap({ scenarioId, events }: ScenarioMapProps) {
 
         {/* EMS marker */}
         {(() => {
-          const emsPos = animatedPositions['ems'] || { lat: scenario.ems.lat, lon: scenario.ems.lon };
-          const isMoving = agentStates['ems']?.phase === 'working';
           const hasArrived = completedAgents.has('ems');
 
           return (
             <Marker
-              latitude={emsPos.lat}
-              longitude={emsPos.lon}
+              latitude={scenario.ems.lat}
+              longitude={scenario.ems.lon}
               anchor="center"
             >
               <div style={{
@@ -396,15 +290,13 @@ export function ScenarioMap({ scenarioId, events }: ScenarioMapProps) {
                 borderRadius: '4px',
                 background: hasArrived ? '#10b981' : '#2563eb',
                 border: '2px solid white',
-                boxShadow: isMoving ? '0 4px 16px rgba(37, 99, 235, 0.6)' : '0 2px 6px rgba(0,0,0,0.25)',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
                 fontSize: '18px',
                 position: 'relative',
-                transform: isMoving ? 'scale(1.15)' : 'scale(1)',
-                transition: 'all 0.3s ease',
               }}>
                 🚑
                 {hasArrived && (
@@ -424,18 +316,6 @@ export function ScenarioMap({ scenarioId, events }: ScenarioMapProps) {
                   }}>
                     ✓
                   </div>
-                )}
-                {isMoving && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-4px',
-                    left: '-4px',
-                    right: '-4px',
-                    bottom: '-4px',
-                    border: '2px solid #2563eb',
-                    borderRadius: '4px',
-                    animation: 'pulse 1.5s infinite',
-                  }} />
                 )}
               </div>
             </Marker>
