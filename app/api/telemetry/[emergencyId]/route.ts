@@ -13,7 +13,7 @@ import { NextRequest } from 'next/server';
 // ── Demo event sequence ────────────────────────────────────────────────────
 
 const DEMO_EVENTS = [
-  { type: 'dispatch', agent: 'coordinator', message: '911 call received — dispatching agents', phase: 'call_received' },
+  { type: 'dispatch', agent: 'coordinator', message: '911 alert received via RapidSOS — dispatching agents', phase: 'call_received' },
   { type: 'agents_dispatching', agent: 'coordinator', message: 'Parallel dispatch initiated — 8 agents activated', phase: 'agents_dispatching' },
   { type: 'aed_located', agent: 'aed_agent', message: 'Nearest AED: Ackerman Union (120m)', phase: 'aeds_located' },
   { type: 'ems_dispatched', agent: 'ems_agent', message: 'EMS Unit RA-61 dispatched — ETA 5 min', phase: 'ems_en_route' },

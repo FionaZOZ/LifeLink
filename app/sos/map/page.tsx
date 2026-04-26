@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { RadiusMap, type LiveHelper } from '@/components/lifelink/RadiusMap';
@@ -28,8 +28,14 @@ const colorForState = (state: string): string => {
 
 export default function NearbyLivePage() {
   const router = useRouter();
+  const params = useSearchParams();
   const { t } = useT();
   const flow = useHelperFlow();
+
+  // `?from=conscious` means we landed here from the responding-bystander
+  // status page. The bottom CTA jumps back to that status; otherwise we keep
+  // the original recovery → CPR-guide flow.
+  const fromConscious = params?.get('from') === 'conscious';
 
   const liveHelpers: LiveHelper[] = flow.rows
     .map(r => {
@@ -64,7 +70,7 @@ export default function NearbyLivePage() {
       <EmergencyBanner/>
 
       <div style={{ position: 'absolute', top: 50, left: 0, right: 0, padding: '8px 18px', background: '#fff', borderBottom: `1px solid ${X.LINE}`, display: 'flex', alignItems: 'center', gap: 12, zIndex: 8 }}>
-        <button onClick={() => router.back()} aria-label={t('common.back')} style={{ all: 'unset', cursor: 'pointer' }}>
+        <button onClick={() => fromConscious ? router.push('/sos/dispatch/conscious') : router.back()} aria-label={t('common.back')} style={{ all: 'unset', cursor: 'pointer' }}>
           <Icon name="chevron-right" size={20} color={X.INK} stroke={2.4} style={{ transform: 'rotate(180deg)' }}/>
         </button>
         <div style={{ flex: 1 }}>
@@ -105,7 +111,17 @@ export default function NearbyLivePage() {
           })}
         </div>
         <div style={{ marginTop: 10 }}>
-          <button onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, background: X.RED, color: '#fff', borderRadius: 12, textAlign: 'center', fontSize: 14, fontWeight: 700 }}>{t('sos.map.openCpr')}</button>
+          {fromConscious ? (
+            <button
+              onClick={() => router.push('/sos/dispatch/conscious')}
+              style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, background: X.INK, color: '#fff', borderRadius: 12, textAlign: 'center', fontSize: 14, fontWeight: 700 }}
+            >{t('sos.map.backToStatus')}</button>
+          ) : (
+            <button
+              onClick={() => router.push('/sos/cpr/assist')}
+              style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box', padding: 14, background: X.RED, color: '#fff', borderRadius: 12, textAlign: 'center', fontSize: 14, fontWeight: 700 }}
+            >{t('sos.map.openCpr')}</button>
+          )}
         </div>
       </div>
     </Screen>
