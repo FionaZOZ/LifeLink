@@ -1,7 +1,10 @@
 /**
- * Synthesized phone-ring loop. Web Audio API only — no asset to ship.
- * Pattern: classic North-American ringback (440 Hz + 480 Hz combined),
- * 2 s on / 4 s off, repeated until stopped. Volume defaults low so it
+ * Synthesized phone-ringer loop (recipient side — what the *called* phone
+ * plays, not the caller's ringback). Web Audio API only — no asset to ship.
+ *
+ * Pattern: classic "ring-ring" double burst — two short trill bursts of
+ * alternating 950/1280 Hz (~25 Hz warble, mimics an electromechanical bell),
+ * then ~2 s silence, repeated until stopped. Volume defaults low so it
  * coexists with ambient sound without dominating.
  *
  * Caller must invoke `startPhoneRing()` from inside (or shortly after) a
@@ -25,23 +28,36 @@ function getCtx(): AudioContext | null {
   return ctx;
 }
 
-function playOneRing(c: AudioContext, gain: GainNode, durationSec = 2) {
-  const t = c.currentTime;
-  // Two-tone superposed sine — the perceptual signature of "phone ringing".
-  for (const freq of [440, 480]) {
+const BURST_DURATION = 0.4;
+const BURST_GAP = 0.18;
+const FULL_CYCLE_SEC = 3.0; // 0.4 + 0.18 + 0.4 + ~2.0 silence
+
+function playOneRing(c: AudioContext, gain: GainNode) {
+  const now = c.currentTime;
+  // Two short bursts ("ring-ring") with a brief gap between.
+  const starts = [now, now + BURST_DURATION + BURST_GAP];
+
+  for (const start of starts) {
     const osc = c.createOscillator();
     osc.type = 'sine';
-    osc.frequency.value = freq;
+    // Warble between two pitches at ~25 Hz to mimic an electromechanical
+    // bell — feels distinctly like an inbound ringer rather than a steady
+    // dial-tone.
+    const halfPeriod = 0.020;
+    let high = false;
+    for (let t = start; t < start + BURST_DURATION; t += halfPeriod) {
+      osc.frequency.setValueAtTime(high ? 1280 : 950, t);
+      high = !high;
+    }
     const g = c.createGain();
-    // Soft attack/release so it doesn't click at burst boundaries.
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.5, t + 0.04);
-    g.gain.setValueAtTime(0.5, t + durationSec - 0.04);
-    g.gain.linearRampToValueAtTime(0, t + durationSec);
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(0.55, start + 0.025);
+    g.gain.setValueAtTime(0.55, start + BURST_DURATION - 0.025);
+    g.gain.linearRampToValueAtTime(0, start + BURST_DURATION);
     osc.connect(g);
     g.connect(gain);
-    osc.start(t);
-    osc.stop(t + durationSec + 0.05);
+    osc.start(start);
+    osc.stop(start + BURST_DURATION + 0.05);
   }
 }
 
@@ -61,12 +77,12 @@ export async function startPhoneRing(volume = 0.15): Promise<void> {
   masterGain.gain.value = volume;
   masterGain.connect(c.destination);
 
-  // Fire the first ring immediately, then every 6 s (2 s tone + 4 s silence).
+  // Fire the first ring-ring immediately, then loop every full cycle.
   playOneRing(c, masterGain);
   ringInterval = setInterval(() => {
     if (!ctx || !masterGain) return;
     playOneRing(ctx, masterGain);
-  }, 6000);
+  }, FULL_CYCLE_SEC * 1000);
 }
 
 export function stopPhoneRing(): void {

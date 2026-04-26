@@ -151,6 +151,10 @@
   60%  { transform: scale(1.06); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
+@keyframes ll-slide-up-fade {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 .ll-pulse-dot { animation: ll-pulse 1.2s ease-in-out infinite; }
 .ll-blink { animation: ll-blink 0.9s steps(2, end) infinite; }
@@ -162,17 +166,18 @@
 .ll-scroll-hide::-webkit-scrollbar { display: none; }
 
 /* Per-page enter transition (driven by app/template.tsx remounting on route
-   change). Tuned to be barely-perceptible: 160ms ease-out fade + 4px slide so
-   navigations feel smooth without ever drawing attention to the transition
-   itself. Honor reduced-motion. */
+   change). Horizontal slide-in from the right + fade — feels like an iOS
+   navigation push. We don't know forward-vs-back without extra state, so this
+   plays for every navigation; for a demo that's an acceptable tradeoff.
+   Honor reduced-motion. */
 @keyframes ll-page-enter {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 .ll-page-enter {
   position: absolute;
   inset: 0;
-  animation: ll-page-enter 160ms ease-out;
+  animation: ll-page-enter 240ms cubic-bezier(0.32, 0.72, 0.24, 1);
   /* Repaint optimization: hint that opacity + transform are about to change. */
   will-change: opacity, transform;
 }
