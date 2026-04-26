@@ -64,7 +64,16 @@ emergency_state: Dict[str, Any] = {
     "patient_profile": None,
     "patient_profile_received_at": None,
     "patient_profile_source": None,
+    # Live readings posted by the patient app from their Apple Watch.
+    # Kept as the most recent sample plus a small ring buffer so EMS / responder
+    # views can show a short trend without us shipping a real time-series store.
+    "heart_rate": None,
+    "heart_rate_received_at": None,
+    "heart_rate_source": None,
+    "heart_rate_history": [],  # list[{bpm, battery, source, ts}], capped
 }
+
+HEART_RATE_HISTORY_MAX = 60
 
 
 class EmergencyTrigger(BaseModel):
@@ -119,6 +128,22 @@ class PatientProfile(BaseModel):
 
     def to_handoff_dict(self) -> Dict[str, Any]:
         return self.model_dump(by_alias=True, exclude_none=True)
+
+
+class HeartRateReading(BaseModel):
+    """
+    Single heart-rate sample posted from the patient app. Source is typically
+    `apple_watch` (live BLE stream) or `apple_watch_sim` (demo simulator).
+    Battery is optional because not every BLE HR device exposes 0x180F.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    bpm: int = Field(..., ge=20, le=300)
+    battery: Optional[int] = Field(default=None, ge=0, le=100)
+    source: Optional[str] = "apple_watch"
+    device_name: Optional[str] = Field(default=None, alias="deviceName")
+    client_timestamp: Optional[str] = Field(default=None, alias="clientTimestamp")
 
 
 def utc_now_iso() -> str:
@@ -238,45 +263,41 @@ async def trigger_emergency(emergency: EmergencyTrigger):
                     </Response>''',
                 )
                 notification["call_sid"] = call.sid
-                print(f"Call initiated to {volunteer['name']}: {call.sid}")
-
             elif volunteer["method"] == "sms":
-                # Send SMS via Textbelt
-                response = requests.post(
+                # Send SMS via Textbelt (free tier)
+                sms_response = requests.post(
                     "https://textbelt.com/text",
-                    {
+                    data={
                         "phone": volunteer["phone"],
-                        "message": f'CardiacLink Emergency Alert: Cardiac arrest at {emergency.address}, {volunteer["distance"]} from you. Respond if available.',
+                        "message": f"🚨 CardiacLink Alert: Cardiac emergency {volunteer['distance']} away at {emergency.address}. Reply YES to respond.",
                         "key": TEXTBELT_API_KEY,
                     },
-                    timeout=10,
                 )
-                print(f"SMS sent to {volunteer['name']}: {response.json()}")
-
+                notification["sms_response"] = sms_response.json()
         except Exception as e:
-            print(f"Error notifying {volunteer['name']}: {e}")
+            notification["error"] = str(e)
             notification["status"] = "failed"
 
         emergency_state["notifications_sent"].append(notification)
 
     return {
         "success": True,
-        "message": "Emergency triggered",
-        "notifications_sent": len(emergency_state["notifications_sent"]),
-        "patient_profile_available": emergency_state["patient_profile"] is not None,
+        "message": "Emergency triggered, volunteers notified",
+        "notifications": emergency_state["notifications_sent"],
+        "location": emergency_state["location"],
     }
 
 
 @app.get("/api/emergency/status")
 async def get_emergency_status():
     """
-    Get current emergency status, including the latest Arduino patient profile.
+    Get current emergency status.
     """
     return emergency_state
 
 
 @app.post("/api/volunteer/respond/{phone}")
-async def volunteer_respond(phone: str, accepted: bool = True):
+async def volunteer_response(phone: str, accepted: bool = True):
     """
     Record volunteer response (accept/decline).
     """
@@ -306,8 +327,59 @@ async def reset_emergency():
         "patient_profile": None,
         "patient_profile_received_at": None,
         "patient_profile_source": None,
+        "heart_rate": None,
+        "heart_rate_received_at": None,
+        "heart_rate_source": None,
+        "heart_rate_history": [],
     }
     return {"success": True, "message": "Emergency state reset"}
+
+
+@app.post("/api/patient/heart-rate")
+async def post_heart_rate(reading: HeartRateReading):
+    """
+    Receive a heart-rate sample from the patient app. The patient app pairs an
+    Apple Watch over Web Bluetooth (Heart Rate service 0x180D) and forwards
+    each notification here so EMS / responder dashboards can read the latest
+    value via GET /api/patient/heart-rate or /api/emergency/status.
+    """
+    global emergency_state
+
+    received_at = utc_now_iso()
+    payload = {
+        "bpm": reading.bpm,
+        "battery": reading.battery,
+        "source": reading.source or "apple_watch",
+        "deviceName": reading.device_name,
+        "ts": received_at,
+    }
+
+    emergency_state["heart_rate"] = payload
+    emergency_state["heart_rate_received_at"] = received_at
+    emergency_state["heart_rate_source"] = payload["source"]
+
+    history = emergency_state.get("heart_rate_history") or []
+    history.append(payload)
+    if len(history) > HEART_RATE_HISTORY_MAX:
+        history = history[-HEART_RATE_HISTORY_MAX:]
+    emergency_state["heart_rate_history"] = history
+
+    return {"success": True, "received_at": received_at, "reading": payload}
+
+
+@app.get("/api/patient/heart-rate")
+async def get_heart_rate():
+    """
+    Return the latest heart-rate sample plus a small history window.
+    """
+    return {
+        "success": True,
+        "has_reading": emergency_state["heart_rate"] is not None,
+        "received_at": emergency_state["heart_rate_received_at"],
+        "source": emergency_state["heart_rate_source"],
+        "reading": emergency_state["heart_rate"],
+        "history": emergency_state.get("heart_rate_history") or [],
+    }
 
 
 if __name__ == "__main__":

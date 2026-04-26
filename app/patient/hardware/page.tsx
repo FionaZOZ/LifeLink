@@ -1,41 +1,51 @@
 'use client';
 import * as React from 'react';
 import { Screen, TopBar } from '@/components/lifelink/Screen';
-import { Icon, ECGLine } from '@/components/lifelink/Icon';
+import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
+import { AppleWatchCard } from '@/components/lifelink/AppleWatchCard';
+import { useAppleWatch } from '@/lib/useAppleWatch';
+
+// "Last usage" of the patch is hardcoded for the demo. In a real build this
+// would come from the same place the SOS flow records compressions.
+const PATCH_LAST_USAGE = '12 Apr · CPR drill · 2 min';
 
 export default function PatientHardwarePage() {
+  // Pull the watch state for the metadata strip's "Apple Watch battery" row.
+  // Both this hook call and the AppleWatchCard above share state via the
+  // module-level singleton in lib/useAppleWatch.ts, so the battery here
+  // reflects the live connection without any prop drilling.
+  const aw = useAppleWatch();
+  const watchBattery = aw.battery != null
+    ? `${aw.battery}%`
+    : 'Not connected';
+  const watchBatteryColor = aw.battery == null
+    ? X.INK3
+    : aw.battery >= 30 ? X.GREEN
+    : aw.battery >= 15 ? X.AMBER
+    : X.RED;
+
   return (
     <Screen>
-      <TopBar title="LifeLink Patch" leading="back" backHref="/profile"/>
+      <TopBar title="LifeLink Hardware" leading="back" backHref="/profile"/>
       <div style={{ padding: '8px 22px 24px', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
-        <div style={{ background: X.INK, color: '#fff', borderRadius: 18, padding: 16, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4 }}>
-            <span style={{ color: X.GREEN }}>● CONNECTED · v2.1</span>
-            <span style={{ opacity: 0.6 }}>SR 200Hz</span>
-          </div>
-          <div style={{ marginTop: 10, fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.4 }}>Eleanor&apos;s Patch</div>
-          <div style={{ fontSize: 12, opacity: 0.7 }}>Worn — left chest · since 06:42</div>
 
-          <div style={{ marginTop: 12, color: X.RED }}>
-            <ECGLine width={300} height={50} color={X.RED} stroke={1.6}/>
-          </div>
+        {/* ── Heart beat (Apple Watch) ───────────────────────────────── */}
+        <SectionLabel>HEART BEAT</SectionLabel>
+        <div style={{ marginTop: 8 }}>
+          <AppleWatchCard variant="hardware"/>
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 8 }}>
-            {[
-              { l: 'HR', v: '72', u: 'bpm' },
-              { l: 'BATT', v: '88', u: '%' },
-              { l: 'SIGNAL', v: '4/4', u: 'bars' },
-            ].map((m, i) => (
-              <div key={i}>
-                <div style={{ fontSize: 9, fontFamily: FONT.mono, opacity: 0.6, letterSpacing: 1.4 }}>{m.l}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5 }}>{m.v}</div>
-                <div style={{ fontSize: 10, fontFamily: FONT.mono, opacity: 0.6 }}>{m.u}</div>
-              </div>
-            ))}
+        {/* ── Eleanor's Patch — CPR device, separate from the watch ──── */}
+        <div style={{ marginTop: 22 }}>
+          <SectionLabel>ELEANOR&apos;S PATCH</SectionLabel>
+          <div style={{ marginTop: 8, fontSize: 12, color: X.INK2, lineHeight: 1.4 }}>
+            Adhesive CPR assist patch. Stays on the chest so a helper can apply
+            chest compressions in the right spot during an emergency.
           </div>
         </div>
 
+        {/* Where to stick it — kept as-is, this is patch placement guidance */}
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>WHERE TO STICK IT</div>
           <div style={{ marginTop: 8, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, padding: 12, display: 'flex', gap: 14, alignItems: 'center' }}>
@@ -58,21 +68,37 @@ export default function PatientHardwarePage() {
           </div>
         </div>
 
+        {/* Device-status strip. The four rows are mixed-source on purpose:
+              · Last usage          → patch (when CPR was last assisted)
+              · Apple Watch battery → live, from the BLE Battery Service
+              · Adhesive / Firmware → patch consumables/updates
+            That's the spec the patient flow asked for. */}
         <div style={{ marginTop: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, overflow: 'hidden' }}>
-          {[
-            ['Last reading', '74 BPM · 30s ago', X.GREEN],
-            ['Charge cycles', '142 / 500', X.AMBER],
-            ['Adhesive', 'Replace in 4 days', X.AMBER],
-            ['Firmware', 'Up to date', X.GREEN],
-          ].map(([l, v, c], i, a) => (
-            <div key={i} style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 10, borderBottom: i < a.length-1 ? `1px solid ${X.LINE2}` : 'none' }}>
-              <div style={{ width: 6, height: 6, borderRadius: 3, background: c as string }}/>
-              <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{l}</div>
-              <div style={{ fontSize: 12, color: X.INK2 }}>{v}</div>
+          {([
+            { label: 'Last usage',          value: PATCH_LAST_USAGE,    color: X.GREEN },
+            { label: 'Apple Watch battery', value: watchBattery,        color: watchBatteryColor },
+            { label: 'Adhesive',            value: 'Replace in 4 days', color: X.AMBER },
+            { label: 'Firmware',            value: 'Up to date',        color: X.GREEN },
+          ] as const).map((row, i, a) => (
+            <div key={row.label} style={{
+              padding: 14, display: 'flex', alignItems: 'center', gap: 10,
+              borderBottom: i < a.length - 1 ? `1px solid ${X.LINE2}` : 'none',
+            }}>
+              <div style={{ width: 6, height: 6, borderRadius: 3, background: row.color }}/>
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{row.label}</div>
+              <div style={{ fontSize: 12, color: X.INK2 }}>{row.value}</div>
             </div>
           ))}
         </div>
       </div>
     </Screen>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2, fontWeight: 700 }}>
+      {children}
+    </div>
   );
 }

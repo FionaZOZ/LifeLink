@@ -3,11 +3,12 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Screen, TabBar } from '@/components/lifelink/Screen';
-import { Icon, ECGLine } from '@/components/lifelink/Icon';
+import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { useDemoRole, isVolunteer, isPatient } from '@/components/lifelink/demoRole';
 import { useHoldToFire } from '@/components/lifelink/useHoldToFire';
 import { clearSosTimer } from '@/components/lifelink/sosTimer';
+import { AppleWatchCard } from '@/components/lifelink/AppleWatchCard';
 
 const HOLD_MS = 1500;
 // Inner button is 240px, outer ring sits at 280px → scale factor to fill is 280/240 ≈ 1.167
@@ -178,6 +179,7 @@ function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
 }
 
 function HomePatient() {
+  const router = useRouter();
   return (
     <Screen>
       <div style={{ padding: '6px 22px 0' }}>
@@ -191,17 +193,9 @@ function HomePatient() {
         <div style={{ fontSize: 13, color: X.INK2, marginTop: 4 }}>Patient · pacemaker · cardiologist Dr. Patel</div>
       </div>
 
-      <Link href="/patient/hardware" style={{ textDecoration: 'none', display: 'block', margin: '18px 22px 0', padding: 16, borderRadius: 20, background: X.INK, color: '#fff', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4 }}>
-          <span style={{ color: X.GREEN }}>● PATCH CONNECTED · v2.1</span>
-          <span style={{ opacity: 0.6 }}>SR 200Hz</span>
-        </div>
-        <div style={{ marginTop: 10, fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.4 }}>72 BPM · steady</div>
-        <div style={{ fontSize: 12, opacity: 0.7 }}>Worn — left chest · since 06:42</div>
-        <div style={{ marginTop: 12, color: X.RED }}>
-          <ECGLine width={300} height={50} color={X.RED} stroke={1.6}/>
-        </div>
-      </Link>
+      <div style={{ margin: '18px 22px 0' }}>
+        <AppleWatchCard variant="home" onCardClick={() => router.push('/patient/hardware')}/>
+      </div>
 
       <Link href="/patient/contacts" style={{ textDecoration: 'none', display: 'flex', margin: '14px 22px 0', padding: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, gap: 12, alignItems: 'center' }}>
         <div style={{ width: 38, height: 38, borderRadius: 12, background: X.RED_BG, color: X.RED, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
