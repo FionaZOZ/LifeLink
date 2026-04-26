@@ -170,7 +170,10 @@ export type AcceptanceEvent = {
 
 const TOAST_VISIBLE_MS = 4500;
 
-export function useLatestAcceptanceEvent(): AcceptanceEvent | null {
+export function useLatestAcceptanceEvent(): {
+  event: AcceptanceEvent | null;
+  dismiss: () => void;
+} {
   const { rows, confirmed } = useHelperFlow();
   const seenRef = React.useRef<Set<string>>(new Set());
   const [active, setActive] = React.useState<AcceptanceEvent | null>(null);
@@ -204,5 +207,7 @@ export function useLatestAcceptanceEvent(): AcceptanceEvent | null {
     return () => clearTimeout(t);
   }, [active]);
 
-  return active;
+  const dismiss = React.useCallback(() => setActive(null), []);
+
+  return { event: active, dismiss };
 }
