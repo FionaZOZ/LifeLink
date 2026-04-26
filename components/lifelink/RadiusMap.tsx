@@ -67,9 +67,14 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
 }) {
   const w = 390;
   const cx = 195, cy = h * 0.46;
+  // Wrap all the map content in a scale-around-centre group so the streets,
+  // the radius rings, the AED tiles and every pin shrink together — gives a
+  // proper zoomed-out feel without rewriting every coord.
+  const ZOOM = 0.78;
   return (
     <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid slice" style={{ background: '#E8EAE6', display: 'block' }}>
       <rect x="0" y="0" width={w} height={h} fill="#E8EAE6"/>
+      <g transform={`translate(${cx} ${cy}) scale(${ZOOM}) translate(${-cx} ${-cy})`}>
       <g fill="#DCDFD8">
         <rect x="10" y="20" width="80" height="120" rx="2"/>
         <rect x="100" y="20" width="100" height="80" rx="2"/>
@@ -126,31 +131,33 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
 
       {mode !== 'locate' && [[340, 350], [110, 90], [60, 480], [360, 200]].map(([x, y], i) => (
         <g key={i}>
-          {/* Red AED tile — 28×28, heart up top + AED text below, all inside the same square */}
+          {/* Red AED tile — 28×28. Heart fills the upper half at full size,
+              AED text sits right below it (gap kept tight). Tile dimensions
+              are unchanged; only the heart-to-text gap is compressed. */}
           <rect x={x-14} y={y-14} width="28" height="28" rx="5" fill={X.RED} stroke="#fff" strokeWidth="1.2"/>
-          {/* White heart, upper half of the tile (~9×8, centred around y-5) */}
+          {/* White heart — full size, sits in the upper portion of the tile */}
           <path
-            d={`M ${x} ${y-1.5}
-                C ${x-2} ${y-3.4}, ${x-4.6} ${y-5}, ${x-4.6} ${y-7.2}
-                C ${x-4.6} ${y-9.2}, ${x-2.6} ${y-9.8}, ${x-1.6} ${y-8.8}
-                C ${x-0.8} ${y-8}, ${x-0.3} ${y-7.6}, ${x} ${y-6.6}
-                C ${x+0.3} ${y-7.6}, ${x+0.8} ${y-8}, ${x+1.6} ${y-8.8}
-                C ${x+2.6} ${y-9.8}, ${x+4.6} ${y-9.2}, ${x+4.6} ${y-7.2}
-                C ${x+4.6} ${y-5}, ${x+2} ${y-3.4}, ${x} ${y-1.5} Z`}
+            d={`M ${x} ${y+1.5}
+                C ${x-3} ${y-1.5}, ${x-7.5} ${y-4}, ${x-7.5} ${y-7.5}
+                C ${x-7.5} ${y-11}, ${x-4.5} ${y-12}, ${x-3} ${y-11}
+                C ${x-1.5} ${y-10}, ${x-0.5} ${y-9}, ${x} ${y-7.5}
+                C ${x+0.5} ${y-9}, ${x+1.5} ${y-10}, ${x+3} ${y-11}
+                C ${x+4.5} ${y-12}, ${x+7.5} ${y-11}, ${x+7.5} ${y-7.5}
+                C ${x+7.5} ${y-4}, ${x+3} ${y-1.5}, ${x} ${y+1.5} Z`}
             fill="#fff"
           />
           {/* Red lightning bolt notched through the heart */}
           <path
-            d={`M ${x+0.5} ${y-7.4}
-                L ${x-1.2} ${y-5}
-                L ${x-0.2} ${y-5}
-                L ${x-0.6} ${y-3}
-                L ${x+1.4} ${y-5.4}
-                L ${x+0.5} ${y-5.4} Z`}
+            d={`M ${x+0.6} ${y-8.4}
+                L ${x-2} ${y-4.4}
+                L ${x-0.4} ${y-4.4}
+                L ${x-0.8} ${y-1.2}
+                L ${x+2.2} ${y-5.4}
+                L ${x+0.6} ${y-5.4} Z`}
             fill={X.RED}
           />
-          {/* AED text in the lower half, inside the same tile */}
-          <text x={x} y={y+8} fontFamily="JetBrains Mono, monospace" fontSize="6.5" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="0.5">AED</text>
+          {/* AED text — moved up to hug the heart's bottom (was y+8, now y+9 baseline / glyph top ~y+3) */}
+          <text x={x} y={y+9} fontFamily="JetBrains Mono, monospace" fontSize="8" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="0.5">AED</text>
         </g>
       ))}
 
@@ -209,6 +216,7 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
         <rect x={cx-14} y={cy+16} width="28" height="12" rx="6" fill="#E11D2E"/>
         <text x={cx} y={cy+24.5} fontFamily="JetBrains Mono, monospace" fontSize="7.5" fontWeight="800" fill="#fff" textAnchor="middle" letterSpacing="0.6">YOU</text>
       </g>
+      </g>{/* end zoom-out scale wrapper */}
     </svg>
   );
 }
