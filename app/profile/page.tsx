@@ -8,7 +8,7 @@ import { useDemoRole, isVolunteer, isPatient, type DemoRole } from '@/components
 
 export default function ProfilePage() {
   const [role, setRole] = useDemoRole();
-  if (isVolunteer(role)) return <ProfileVolunteer setRole={setRole}/>;
+  if (isVolunteer(role)) return <ProfileVolunteer setRole={setRole} patientToo={isPatient(role)}/>;
   if (isPatient(role)) return <ProfilePatient setRole={setRole}/>;
   return <ProfileGuest setRole={setRole}/>;
 }
@@ -125,7 +125,7 @@ function ProfileGuest({ setRole }: { setRole: (r: DemoRole) => void }) {
 // ───────────────────────────────────────────────────────────
 // VOLUNTEER (logged in)
 // ───────────────────────────────────────────────────────────
-function ProfileVolunteer({ setRole }: { setRole: (r: DemoRole) => void }) {
+function ProfileVolunteer({ setRole, patientToo = false }: { setRole: (r: DemoRole) => void; patientToo?: boolean }) {
   const router = useRouter();
   return (
     <Screen>
@@ -184,6 +184,17 @@ function ProfileVolunteer({ setRole }: { setRole: (r: DemoRole) => void }) {
             </div>
           ))}
         </div>
+
+        {/* Add patient-mode card — only when not already a patient */}
+        {!patientToo && (
+          <div style={{ marginTop: 18, padding: 14, background: X.RED_BG, border: `1px solid ${X.RED}33`, borderRadius: 16 }}>
+            <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.RED, fontWeight: 700 }}>+ ADD PATIENT MODE</div>
+            <div style={{ marginTop: 6, fontSize: 13, color: X.INK }}>Have a heart condition? Pair a LifeLink Patch and add emergency contacts.</div>
+            <button onClick={() => { setRole('both'); router.push('/patient/contacts'); }} style={{ all: 'unset', cursor: 'pointer', display: 'inline-block', marginTop: 10, padding: '8px 14px', background: X.RED, color: '#fff', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+              Set up patient profile
+            </button>
+          </div>
+        )}
 
         <div style={{ marginTop: 18, fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>SETTINGS</div>
         <div style={{ marginTop: 8, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, overflow: 'hidden' }}>

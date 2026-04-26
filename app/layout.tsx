@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Stage } from "@/components/lifelink/Screen";
 import { RoleSwitcher } from "@/components/lifelink/RoleSwitcher";
+import { IncomingCallTrigger } from "@/components/lifelink/IncomingCallTrigger";
 
 export const metadata: Metadata = {
   title: "LifeLink",
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body>
         <Stage>{children}</Stage>
         <RoleSwitcher />
+        <IncomingCallTrigger />
       </body>
     </html>
   );

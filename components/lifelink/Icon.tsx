@@ -5,7 +5,8 @@ type IconName =
   | 'arrow-right' | 'arrow-up' | 'chevron-right' | 'chevron-down'
   | 'home' | 'message' | 'user' | 'bell' | 'shield' | 'zap' | 'mic'
   | 'volume' | 'clock' | 'compass' | 'plus' | 'minus' | 'cross'
-  | 'aed' | 'walk' | 'shuffle' | 'siren' | 'plug' | 'qr' | 'activity';
+  | 'aed' | 'walk' | 'shuffle' | 'siren' | 'plug' | 'qr' | 'activity'
+  | 'pip';
 
 type Props = {
   name: IconName;
@@ -100,6 +101,8 @@ export function Icon({ name, size = 24, color = 'currentColor', stroke = 1.8, fi
       return <svg {...svgProps}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z M20 14h1 M14 20h1 M17 17h4v4"/></svg>;
     case 'activity':
       return <svg {...svgProps}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+    case 'pip':
+      return <svg {...svgProps}><rect x="3" y="3" width="13" height="13" rx="2"/><rect x="10" y="10" width="11" height="11" rx="2"/></svg>;
     default:
       return <svg {...svgProps}><circle cx="12" cy="12" r="10"/></svg>;
   }
