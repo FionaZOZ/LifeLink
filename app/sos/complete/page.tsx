@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { Screen } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
-import { getSosElapsedNow, fmtElapsed, clearSosTimer, SOS_COMPLETE_ELAPSED_KEY } from '@/components/lifelink/sosTimer';
+import {
+  getSosElapsedNow,
+  fmtElapsed,
+  clearSosTimer,
+  SOS_COMPLETE_ELAPSED_KEY,
+  CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
+} from '@/components/lifelink/sosTimer';
 
 // Timeline anchors as fractions of total emergency duration. Real elapsed
 // gets multiplied through these so the timeline rescales to whatever
@@ -40,6 +46,20 @@ export default function CompletePage() {
     }
     return Math.max(30, getSosElapsedNow());
   }, []);
+
+  /** Populated from session when assist/recovery ends; `'--'` if no patch. Key must survive `clearSosTimer` until this page reads it. */
+  const [idealBandStat, setIdealBandStat] = React.useState('78%');
+  React.useLayoutEffect(() => {
+    try {
+      const v = window.sessionStorage.getItem(CPR_SUMMARY_HAD_PATCH_SENSOR_KEY);
+      if (v == null) return;
+      window.sessionStorage.removeItem(CPR_SUMMARY_HAD_PATCH_SENSOR_KEY);
+      setIdealBandStat(v === '1' ? '78%' : '--');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   // CPR duration ≈ 55% of total (between phases 'started CPR' and 'EMS on scene').
   const cprSeconds = Math.max(20, Math.floor(totalSeconds * 0.55));
   const compressionsDelivered = Math.round((cprSeconds / 60) * 110); // 110 bpm target
@@ -69,7 +89,7 @@ export default function CompletePage() {
         <div style={{ marginTop: 16, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 18, padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
           {[
             { k: String(compressionsDelivered), l: 'COMPRESSIONS' },
-            { k: '78%', l: 'IN IDEAL BAND' },
+            { k: idealBandStat, l: 'IN IDEAL BAND' },
             { k: fmtClock(cprSeconds), l: 'CPR DURATION' },
           ].map((s, i) => (
             <div key={i} style={{ borderRight: i < 2 ? `1px solid ${X.LINE2}` : 'none', paddingRight: i < 2 ? 8 : 0 }}>

@@ -16,9 +16,11 @@ export default function BreathingPage() {
       <EmergencyBanner/>
 
       <div style={{ padding: '70px 22px 0' }}>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>STEP 2 · CHECK · DISPATCH SENT</div>
-        <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05 }}>
-          Are they<br/>breathing?
+        <div aria-hidden="true">
+          <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>STEP 2 · CHECK · DISPATCH SENT</div>
+          <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05 }}>
+            Are they<br/>breathing?
+          </div>
         </div>
 
         <div style={{ marginTop: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, padding: 14 }}>

@@ -1,7 +1,6 @@
 /** One-way ElevenLabs lines aligned with each SOS screen (no user replies). */
 
 export const SOS_RESPOND_LINES = [
-  'Step one. Before we call for more help, check if they respond.',
   'Tap their shoulders firmly.',
   'Shout: Are you OK?',
   'Look for any movement, sound, or eye opening for up to ten seconds.',
@@ -9,7 +8,7 @@ export const SOS_RESPOND_LINES = [
 ] as const;
 
 export const SOS_BREATHE_LINES = [
-  'Step two. Are they breathing? Tilt their head back and watch the chest.',
+  'Tilt their head back. Watch the chest.',
   'Look, listen, and feel for normal breathing for no more than ten seconds. Gasping is not normal breathing.',
   'If they are breathing normally, choose that option. If they are not breathing or only gasping, start CPR now.',
 ] as const;

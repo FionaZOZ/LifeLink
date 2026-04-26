@@ -10,7 +10,12 @@ import {
   type CprAmbulanceSnapshot,
 } from '@/components/lifelink/CprSessionArrivals';
 import { X, FONT } from '@/components/lifelink/tokens';
-import { clearSosTimer, getSosElapsedNow, SOS_COMPLETE_ELAPSED_KEY } from '@/components/lifelink/sosTimer';
+import {
+  clearSosTimer,
+  getSosElapsedNow,
+  SOS_COMPLETE_ELAPSED_KEY,
+  CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
+} from '@/components/lifelink/sosTimer';
 
 export default function RecoveryPage() {
   const router = useRouter();
@@ -25,8 +30,13 @@ export default function RecoveryPage() {
 
   const endEmergencyFromReport = React.useCallback(() => {
     const sec = getSosElapsedNow();
+    const snap = readStoredAmbulanceReport() ?? buildMinimalAmbulanceSnapshot(sec);
     try {
       window.sessionStorage.setItem(SOS_COMPLETE_ELAPSED_KEY, String(Math.max(1, sec)));
+      window.sessionStorage.setItem(
+        CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
+        snap.sensorCount !== null ? '1' : '0',
+      );
     } catch {
       /* ignore */
     }

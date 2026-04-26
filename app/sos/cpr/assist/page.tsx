@@ -39,6 +39,7 @@ import {
   getSosElapsedNow,
   SOS_COMPLETE_ELAPSED_KEY,
   CPR_PROFILE_SHEET_ACKED_KEY,
+  CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
 } from '@/components/lifelink/sosTimer';
 import { ensureBeatAudioUnlocked } from '@/lib/compressionBeatSound';
 import { stopElevenLabsPlayback } from '@/lib/voice/playElevenLabsLine';
@@ -382,8 +383,13 @@ export default function CPRAssistPage() {
 
   const endEmergencyFromAssistSummary = React.useCallback(() => {
     const sec = getSosElapsedNow();
+    const snap = ambulanceSnapshot;
     try {
       window.sessionStorage.setItem(SOS_COMPLETE_ELAPSED_KEY, String(Math.max(1, sec)));
+      window.sessionStorage.setItem(
+        CPR_SUMMARY_HAD_PATCH_SENSOR_KEY,
+        snap != null && snap.sensorCount !== null ? '1' : '0',
+      );
     } catch {
       /* ignore */
     }
@@ -391,7 +397,7 @@ export default function CPRAssistPage() {
     setAmbulanceSnapshot(null);
     clearSosTimer();
     router.push('/sos/complete');
-  }, [router]);
+  }, [router, ambulanceSnapshot]);
 
   const arrival: AssistArrivalProps = {
     onAedArrived: handleAedArrived,

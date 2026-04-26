@@ -10,6 +10,8 @@ export const LAST_AMBULANCE_REPORT_KEY = 'lifelink:lastAmbulanceReport';
 export const SOS_COMPLETE_ELAPSED_KEY = 'lifelink:sosCompleteElapsed';
 /** Set when the user dismisses the patch profile sheet (e.g. on tutorial); CPR assist skips auto-open. */
 export const CPR_PROFILE_SHEET_ACKED_KEY = 'lifelink:cprProfileSheetAcked';
+/** `'1'` = patch supplied sensor counts during CPR; `'0'` = phone-only. Cleared in `startSosTimer` or after read on `/sos/complete`; not cleared in `clearSosTimer`. */
+export const CPR_SUMMARY_HAD_PATCH_SENSOR_KEY = 'lifelink:cprSummaryHadPatchSensor';
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour — drop stale timers from previous browser sessions
 
 export function startSosTimer() {
@@ -23,6 +25,7 @@ export function startSosTimer() {
   try {
     window.sessionStorage.removeItem(LAST_AMBULANCE_REPORT_KEY);
     window.sessionStorage.removeItem(CPR_PROFILE_SHEET_ACKED_KEY);
+    window.sessionStorage.removeItem(CPR_SUMMARY_HAD_PATCH_SENSOR_KEY);
   } catch {
     /* ignore */
   }
@@ -37,6 +40,7 @@ export function clearSosTimer() {
   try {
     window.sessionStorage.removeItem(LAST_AMBULANCE_REPORT_KEY);
     window.sessionStorage.removeItem(CPR_PROFILE_SHEET_ACKED_KEY);
+    // Intentionally keep CPR_SUMMARY_HAD_PATCH_SENSOR_KEY — set just before clear for `/sos/complete`; consumed there.
   } catch {
     /* ignore */
   }
