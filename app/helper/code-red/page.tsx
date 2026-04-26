@@ -27,7 +27,7 @@ export default function CodeRedPage() {
           <div style={{ fontSize: 22, fontWeight: 700, marginTop: 2 }}>Eleanor T., 67</div>
           <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>HF · arrhythmia · pacemaker (2022)</div>
           <div style={{ display: 'flex', gap: 18, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-            {[['DISTANCE', '180 m'], ['ETA', '2:10'], ['AED', 'en route']].map(([l, v], i) => (
+            {[['DISTANCE', '180 m'], ['ETA', '2:10'], ['AED', 'on the way']].map(([l, v], i) => (
               <div key={i}>
                 <div style={{ fontSize: 10, opacity: 0.7, fontFamily: FONT.mono }}>{l}</div>
                 <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display }}>{v}</div>

@@ -54,8 +54,8 @@ export default function NearbyLivePage() {
 
   const headerSub = `2 mi radius · ${acceptedCount} of ${totalAlerted || 4} accepted · 4 AEDs`;
   const sheetTagline = onSceneCount > 0
-    ? `${onSceneCount} ON SCENE · ${enRouteCount} EN ROUTE`
-    : `${enRouteCount} EN ROUTE`;
+    ? `${onSceneCount} ON SCENE · ${enRouteCount} ON THE WAY`
+    : `${enRouteCount} ON THE WAY`;
 
   return (
     <Screen padTop={0}>

@@ -27,8 +27,8 @@ export default function DispatchUnconsciousPage() {
     helpersTitle = `${alertedCount} ${alertedCount === 1 ? 'helper' : 'helpers'} notified`;
     helpersSub = 'Waiting for accept';
   } else if (closestEnRoute) {
-    helpersTitle = `${closestEnRoute.helper.name.split(' ·')[0]} en route · ${acceptedRows.length} of ${alertedCount} accepted`;
-    helpersSub = closestEnRoute.rowEtaText === 'ON SCENE' ? 'on scene' : `ETA ${closestEnRoute.rowEtaText} · AED en route`;
+    helpersTitle = `${closestEnRoute.helper.name.split(' ·')[0]} on the way · ${acceptedRows.length} of ${alertedCount} accepted`;
+    helpersSub = closestEnRoute.rowEtaText === 'ON SCENE' ? 'on scene' : `ETA ${closestEnRoute.rowEtaText} · AED on the way`;
   } else {
     helpersSub = ''; helpersTitle = '';
   }
@@ -106,7 +106,7 @@ export default function DispatchUnconsciousPage() {
               {!dispatched ? '3 nearby helpers waiting' : helpersTitle}
             </div>
             <div style={{ fontSize: 11, color: X.BLUE, opacity: 0.85 }}>
-              {!dispatched ? 'Closest 0.3 mi · AED en route' : helpersSub}
+              {!dispatched ? 'Closest 0.3 mi · AED on the way' : helpersSub}
             </div>
           </div>
         </div>
