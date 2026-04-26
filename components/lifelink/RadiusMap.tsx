@@ -3,22 +3,49 @@ import { X } from './tokens';
 
 type Mode = 'live' | 'overview' | 'helper' | 'locate';
 
-function ResponderPin({ x, y, initial, label, eta, muted, badge, color }: {
-  x: number; y: number; initial: string; label?: string; eta?: string;
+export type LiveHelper = {
+  id: string;
+  initial: string;
+  startX: number;
+  startY: number;
+  color: string;
+  state: 'queued' | 'notified' | 'accepted' | 'arriving' | 'on_scene';
+  etaText: string;        // "1:50", "ON SCENE", "PENDING", etc.
+  badge?: string;         // e.g. "AED" while bringing the AED
+  routePath?: string;     // SVG path string for the dashed route from start → centre
+};
+
+function ResponderPin({ x, y, initial, eta, muted, badge, color, arrived = false, animate = false }: {
+  x: number; y: number; initial: string; eta?: string;
   muted?: boolean; badge?: string; color?: string;
+  arrived?: boolean; animate?: boolean;
 }) {
+  const stroke = arrived ? X.GREEN : muted ? X.LINE : (color || X.GREEN);
+  const ringFill = arrived ? X.GREEN : muted ? '#EFEDE6' : (color || X.GREEN);
+  const ringFillOpacity = arrived ? 0.9 : muted ? 1 : 0.18;
+  const labelFill = arrived ? '#fff' : muted ? X.INK2 : (color || X.GREEN);
+  const showEta = !muted && eta;
+  const transitionStyle: React.CSSProperties = animate ? { transition: 'cx 700ms cubic-bezier(0.4, 0, 0.2, 1), cy 700ms cubic-bezier(0.4, 0, 0.2, 1)' } : {};
   return (
     <g>
-      <circle cx={x} cy={y} r="18" fill="#fff" stroke={muted ? X.LINE : (color || X.GREEN)} strokeWidth={muted ? 1 : 2}/>
-      <circle cx={x} cy={y} r="14" fill={muted ? '#EFEDE6' : (color || X.GREEN)} fillOpacity={muted ? 1 : 0.18}/>
-      <text x={x} y={y+4} fontFamily="Inter, sans-serif" fontSize="12" fontWeight="700" fill={muted ? X.INK2 : (color || X.GREEN)} textAnchor="middle">{initial}</text>
-      {!muted && eta && (
-        <g>
-          <rect x={x-22} y={y+22} width="44" height="16" rx="8" fill="#fff" stroke={X.LINE}/>
-          <text x={x} y={y+33} fontFamily="JetBrains Mono, monospace" fontSize="9" fontWeight="700" fill={X.INK} textAnchor="middle">{eta}</text>
+      <circle cx={x} cy={y} r="18" fill="#fff" stroke={stroke} strokeWidth={muted ? 1 : 2} style={transitionStyle}/>
+      <circle cx={x} cy={y} r="14" fill={ringFill} fillOpacity={ringFillOpacity} style={transitionStyle}/>
+      {arrived ? (
+        <path
+          d={`M ${x-5} ${y+1} l 3 3 l 7 -7`}
+          stroke={labelFill} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round"
+          style={transitionStyle}
+        />
+      ) : (
+        <text x={x} y={y+4} fontFamily="Inter, sans-serif" fontSize="12" fontWeight="700" fill={labelFill} textAnchor="middle" style={transitionStyle}>{initial}</text>
+      )}
+      {showEta && (
+        <g style={transitionStyle}>
+          <rect x={x-22} y={y+22} width="44" height="16" rx="8" fill={arrived ? X.GREEN : '#fff'} stroke={arrived ? X.GREEN : X.LINE}/>
+          <text x={x} y={y+33} fontFamily="JetBrains Mono, monospace" fontSize={arrived ? 8 : 9} fontWeight={arrived ? 800 : 700} fill={arrived ? '#fff' : X.INK} textAnchor="middle">{eta}</text>
         </g>
       )}
-      {badge && (
+      {badge && !arrived && (
         <g>
           <rect x={x-2} y={y-26} width="28" height="14" rx="7" fill={X.AMBER}/>
           <text x={x+12} y={y-16} fontFamily="Inter, sans-serif" fontSize="9" fontWeight="800" fill="#fff" textAnchor="middle">{badge}</text>
@@ -28,7 +55,16 @@ function ResponderPin({ x, y, initial, label, eta, muted, badge, color }: {
   );
 }
 
-export function RadiusMap({ mode = 'live', h = 514 }: { mode?: Mode; h?: number }) {
+export function RadiusMap({ mode = 'live', h = 514, helpers }: {
+  mode?: Mode;
+  h?: number;
+  /**
+   * Optional live helper data. When provided, the responder pins + dashed
+   * route paths are rendered from this list instead of the hardcoded demo
+   * defaults — pins move to the victim centre when state === 'on_scene'.
+   */
+  helpers?: LiveHelper[];
+}) {
   const w = 390;
   const cx = 195, cy = h * 0.46;
   return (
@@ -72,7 +108,15 @@ export function RadiusMap({ mode = 'live', h = 514 }: { mode?: Mode; h?: number 
         </g>
       )}
 
-      {(mode === 'live' || mode === 'helper') && (
+      {/* Routes — driven by helpers data when provided, else fall back to the hardcoded demo paths. */}
+      {helpers ? (
+        <g fill="none" strokeLinecap="round" strokeDasharray="2 5">
+          {helpers.map(h => {
+            if (h.state === 'queued' || h.state === 'notified' || h.state === 'on_scene' || !h.routePath) return null;
+            return <path key={h.id} d={h.routePath} stroke={h.color} strokeWidth="2.5" opacity={h.state === 'arriving' ? 1 : 0.8}/>;
+          })}
+        </g>
+      ) : (mode === 'live' || mode === 'helper') && (
         <g fill="none" strokeLinecap="round" strokeDasharray="2 5">
           <path d="M 60 380 Q 130 320 195 220" stroke="#1F8A4D" strokeWidth="2.5"/>
           <path d="M 320 80 Q 260 130 195 220" stroke="#9095A0" strokeWidth="2"/>
@@ -87,11 +131,33 @@ export function RadiusMap({ mode = 'live', h = 514 }: { mode?: Mode; h?: number 
         </g>
       ))}
 
-      {(mode === 'live' || mode === 'helper' || mode === 'overview') && (
+      {/* Responder pins — also driven by helpers data when provided. */}
+      {helpers ? (
         <g>
-          <ResponderPin x={60} y={380} initial="A" label="Alex" eta="1:50" color={X.GREEN}/>
-          <ResponderPin x={340} y={350} initial="S" label="Sarah" eta="3:10" color={X.AMBER} badge="AED"/>
-          <ResponderPin x={320} y={80} initial="J" label="Jordan" eta="4:00" muted/>
+          {helpers.map(h => {
+            const arrived = h.state === 'on_scene';
+            const muted = h.state === 'queued' || h.state === 'notified';
+            return (
+              <ResponderPin
+                key={h.id}
+                x={arrived ? cx : h.startX}
+                y={arrived ? cy + 30 : h.startY}
+                initial={h.initial}
+                eta={arrived ? 'ON SCENE' : muted ? undefined : h.etaText}
+                muted={muted}
+                badge={h.badge}
+                color={h.color}
+                arrived={arrived}
+                animate
+              />
+            );
+          })}
+        </g>
+      ) : (mode === 'live' || mode === 'helper' || mode === 'overview') && (
+        <g>
+          <ResponderPin x={60} y={380} initial="A" eta="1:50" color={X.GREEN}/>
+          <ResponderPin x={340} y={350} initial="S" eta="3:10" color={X.AMBER} badge="AED"/>
+          <ResponderPin x={320} y={80} initial="J" eta="4:00" muted/>
         </g>
       )}
 
