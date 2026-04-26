@@ -36,9 +36,9 @@ export default function PatientHardwarePage() {
           <AppleWatchCard variant="hardware"/>
         </div>
 
-        {/* ── Eleanor's Patch — CPR device, separate from the watch ──── */}
+        {/* ── YOUR Patch — CPR device, separate from the watch ──── */}
         <div style={{ marginTop: 22 }}>
-          <SectionLabel>ELEANOR&apos;S PATCH</SectionLabel>
+          <SectionLabel>YOUR PATCH</SectionLabel>
           <div style={{ marginTop: 8, fontSize: 12, color: X.INK2, lineHeight: 1.4 }}>
             Adhesive CPR assist patch. Stays on the chest so a helper can apply
             chest compressions in the right spot during an emergency.
