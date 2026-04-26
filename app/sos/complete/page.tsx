@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Screen } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
-import { getSosElapsedNow, fmtElapsed, clearSosTimer } from '@/components/lifelink/sosTimer';
+import { getSosElapsedNow, fmtElapsed, clearSosTimer, SOS_COMPLETE_ELAPSED_KEY } from '@/components/lifelink/sosTimer';
 
 // Timeline anchors as fractions of total emergency duration. Real elapsed
 // gets multiplied through these so the timeline rescales to whatever
@@ -24,8 +24,22 @@ function fmtClock(s: number) {
 }
 
 export default function CompletePage() {
-  // Snapshot the elapsed seconds at mount (so the timeline doesn't drift after we clear).
-  const totalSeconds = React.useMemo(() => Math.max(30, getSosElapsedNow()), []);
+  // Prefer elapsed captured before `clearSosTimer` (e.g. recovery → End emergency); else live SOS clock.
+  const totalSeconds = React.useMemo(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const v = window.sessionStorage.getItem(SOS_COMPLETE_ELAPSED_KEY);
+        if (v != null) {
+          const n = Number(v);
+          window.sessionStorage.removeItem(SOS_COMPLETE_ELAPSED_KEY);
+          if (Number.isFinite(n) && n > 0) return Math.max(1, n);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return Math.max(30, getSosElapsedNow());
+  }, []);
   // CPR duration ≈ 55% of total (between phases 'started CPR' and 'EMS on scene').
   const cprSeconds = Math.max(20, Math.floor(totalSeconds * 0.55));
   const compressionsDelivered = Math.round((cprSeconds / 60) * 110); // 110 bpm target

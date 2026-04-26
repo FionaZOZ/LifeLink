@@ -1,8 +1,15 @@
 'use client';
 import * as React from 'react';
+import { stopElevenLabsPlayback } from '@/lib/voice/playElevenLabsLine';
 
 const KEY = 'lifelink:sosStartedAt';
 const DISPATCH_KEY = 'lifelink:dispatchConfirmedAt';
+/** Last CPR assist “Ambulance arrived” snapshot for recovery / handoff flows. */
+export const LAST_AMBULANCE_REPORT_KEY = 'lifelink:lastAmbulanceReport';
+/** Captured SOS elapsed seconds before `clearSosTimer` so `/sos/complete` can still show duration. */
+export const SOS_COMPLETE_ELAPSED_KEY = 'lifelink:sosCompleteElapsed';
+/** Set when the user dismisses the patch profile sheet (e.g. on tutorial); CPR assist skips auto-open. */
+export const CPR_PROFILE_SHEET_ACKED_KEY = 'lifelink:cprProfileSheetAcked';
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour — drop stale timers from previous browser sessions
 
 export function startSosTimer() {
@@ -13,6 +20,12 @@ export function startSosTimer() {
     const start = Number(existing);
     if (Number.isFinite(start) && Date.now() - start < MAX_AGE_MS) return;
   }
+  try {
+    window.sessionStorage.removeItem(LAST_AMBULANCE_REPORT_KEY);
+    window.sessionStorage.removeItem(CPR_PROFILE_SHEET_ACKED_KEY);
+  } catch {
+    /* ignore */
+  }
   window.sessionStorage.setItem(KEY, String(Date.now()));
   window.dispatchEvent(new CustomEvent('lifelink:sos-timer'));
 }
@@ -21,7 +34,24 @@ export function clearSosTimer() {
   if (typeof window === 'undefined') return;
   window.sessionStorage.removeItem(KEY);
   window.sessionStorage.removeItem(DISPATCH_KEY);
+  try {
+    window.sessionStorage.removeItem(LAST_AMBULANCE_REPORT_KEY);
+    window.sessionStorage.removeItem(CPR_PROFILE_SHEET_ACKED_KEY);
+  } catch {
+    /* ignore */
+  }
+  stopElevenLabsPlayback();
   window.dispatchEvent(new CustomEvent('lifelink:sos-timer'));
+}
+
+/** True when the user is inside an active SOS window (e.g. after hold-to-emergency → /sos). */
+export function isSosFlowActive(): boolean {
+  if (typeof window === 'undefined') return false;
+  const v = window.sessionStorage.getItem(KEY);
+  if (!v) return false;
+  const start = Number(v);
+  if (!Number.isFinite(start)) return false;
+  return Date.now() - start < MAX_AGE_MS;
 }
 
 export function markDispatchConfirmed() {

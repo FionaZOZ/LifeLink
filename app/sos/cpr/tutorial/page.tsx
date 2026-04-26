@@ -2,7 +2,15 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
+import { PatientProfileSheet } from '@/components/lifelink/PatientProfileSheet';
+import { PatchBanner } from '@/components/lifelink/PatchBanner';
 import { X, FONT } from '@/components/lifelink/tokens';
+import { CPR_PROFILE_SHEET_ACKED_KEY, isSosFlowActive } from '@/components/lifelink/sosTimer';
+import { useSosSerialCpr } from '@/lib/cpr/SosSerialCprContext';
+import { useEffectiveProfile, useProfileRetry } from '@/lib/cpr/patchSerialSession';
+import { usePatchProfileSheet } from '@/lib/cpr/usePatchProfileSheet';
+import { SOS_CPR_TUTORIAL_LINES } from '@/lib/voice/sosNarrationScripts';
+import { useElevenLabsScriptedNarration } from '@/lib/voice/useElevenLabsScriptedNarration';
 
 function PhotoCard({ label, sub, src, alt }: { label: string; sub: string; src: string; alt: string }) {
   return (
@@ -21,12 +29,29 @@ function PhotoCard({ label, sub, src, alt }: { label: string; sub: string; src: 
 
 export default function CPRTutorialPage() {
   const router = useRouter();
+  const cpr = useSosSerialCpr();
+  const connected = cpr.isConnected && cpr.isReceiving;
+  const effective = useEffectiveProfile(cpr);
+  const { open: profileSheetOpen, dismiss: dismissProfileSheet, openManually } = usePatchProfileSheet(
+    effective.profile,
+    connected,
+  );
+  const dismissProfile = React.useCallback(() => {
+    try {
+      window.sessionStorage.setItem(CPR_PROFILE_SHEET_ACKED_KEY, '1');
+    } catch {
+      /* ignore */
+    }
+    dismissProfileSheet();
+  }, [dismissProfileSheet]);
+  useProfileRetry(cpr);
+  useElevenLabsScriptedNarration('sos-cpr-tutorial', SOS_CPR_TUTORIAL_LINES, isSosFlowActive());
   return (
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>
 
-      {/* scrollable body so the bigger stacked photos can breathe */}
-      <div style={{ position: 'absolute', top: 50, left: 0, right: 0, bottom: 88, overflowY: 'auto', padding: '20px 22px 24px' }}>
+      {/* scrollable body — leave room for patch row + CTAs */}
+      <div style={{ position: 'absolute', top: 50, left: 0, right: 0, bottom: 138, overflowY: 'auto', padding: '20px 22px 24px' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>BEFORE YOU START</div>
         <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.1 }}>
           Place your hands<br/>like this.
@@ -35,6 +60,9 @@ export default function CPRTutorialPage() {
         {/* Stacked, full-width photos so the anatomical detail stays legible */}
         <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <PhotoCard label="① CENTER OF CHEST" sub="Lower half of breastbone" src="/cpr/hands-position.png" alt="Hands placed on the lower half of the breastbone"/>
+          <p style={{ margin: 0, fontSize: 13, color: X.INK2, lineHeight: 1.45, padding: '0 2px' }}>
+            Put the sensor on the place you&apos;ll press, if you have one.
+          </p>
           <PhotoCard label="② STACK YOUR HANDS" sub="Heel of one, palm of the other" src="/cpr/hands-posing.png" alt="Stacking the heel of one hand on top of the other"/>
         </div>
 
@@ -56,10 +84,26 @@ export default function CPRTutorialPage() {
         </div>
       </div>
 
-      <div style={{ position: 'absolute', left: 22, right: 22, bottom: 22, display: 'flex', gap: 10 }}>
-        <button onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', padding: '14px 18px', border: `1px solid ${X.LINE}`, color: X.INK, borderRadius: 14, fontWeight: 700, fontSize: 13 }}>Skip</button>
-        <button onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 16, background: X.RED, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 800, letterSpacing: 0.4, boxShadow: '0 8px 24px rgba(225,29,46,0.3)' }}>I&apos;M READY · START CPR</button>
+      <div style={{ position: 'absolute', left: 22, right: 22, bottom: 22 }}>
+        <PatchBanner
+          cpr={cpr}
+          connected={connected}
+          effectiveProfile={effective.profile}
+          isFallbackProfile={effective.isFallback}
+          onOpenProfile={openManually}
+        />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button type="button" onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', padding: '14px 18px', border: `1px solid ${X.LINE}`, color: X.INK, borderRadius: 14, fontWeight: 700, fontSize: 13 }}>Skip</button>
+          <button type="button" onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 16, background: X.RED, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 800, letterSpacing: 0.4, boxShadow: '0 8px 24px rgba(225,29,46,0.3)' }}>I&apos;M READY · START CPR</button>
+        </div>
       </div>
+      <PatientProfileSheet
+        profile={effective.profile}
+        open={profileSheetOpen}
+        onDismiss={dismissProfile}
+        syncedAt={effective.isFallback ? null : cpr.profileSyncedAt}
+        syncError={effective.isFallback ? 'Demo profile · Arduino sketch needs reflash for live data' : cpr.profileSyncError}
+      />
     </Screen>
   );
 }

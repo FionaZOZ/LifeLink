@@ -1,82 +1,78 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PhaseInfo } from '@/lib/cpr/cprAssistPhase';
 import { IDEAL_HI, IDEAL_LO } from '@/lib/cpr/cprAssistPhase';
+import { playElevenLabsLine, stopElevenLabsPlayback } from '@/lib/voice/playElevenLabsLine';
 
 const HARDWARE_DEPTH_COOLDOWN_MS = 12_000;
 const HARDWARE_RATE_COOLDOWN_MS = 14_000;
+const HARDWARE_KEEP_GOING_MS = 22_000;
 
 type Options = {
-  phase: PhaseInfo;
   /** True when LifeLink patch serial is streaming. */
   hardwareActive: boolean;
   /** Live depth in cm from patch, or null if no hardware. */
   depthCm: number | null;
   /** Estimated compression rate when hardware provides counts (BPM). */
   hardwareBpm: number | null;
-  /** User tapped "Voice coach on". */
+  /** User can mute ElevenLabs on the CPR screen. */
   voiceEnabledByUser: boolean;
+  /** While on helper call, stop TTS and do not enqueue new lines. */
+  voiceMutedForCall: boolean;
 };
 
 /**
- * Queued ElevenLabs TTS aligned with CPR assist UI + hardware depth/rate hints.
- * One-way instructions only (no mic / STT).
+ * CPR assist: ElevenLabs only for patch-based coaching — "push harder", "keep going", rate hints.
+ * Push-phase metronome ticks are driven by `useAssistPushMetronome`; this hook does not play them.
  */
 export function useCprElevenLabsVoice(opts: Options) {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
 
   const chainRef = useRef(Promise.resolve());
-  const prevPhaseRef = useRef<PhaseInfo['phase'] | null>(null);
-  const milestonesRef = useRef<{ cycle: number; tens: Set<number> }>({ cycle: -1, tens: new Set() });
-  const introStartedRef = useRef(false);
   const lastDepthCueRef = useRef(0);
   const lastRateCueRef = useRef(0);
+  const lastKeepGoingRef = useRef(0);
+
+  const enabledRef = useRef(opts.voiceEnabledByUser);
+  const hardwareRef = useRef(opts.hardwareActive);
+  const mutedForCallRef = useRef(opts.voiceMutedForCall);
+  enabledRef.current = opts.voiceEnabledByUser;
+  hardwareRef.current = opts.hardwareActive;
+  mutedForCallRef.current = opts.voiceMutedForCall;
 
   useEffect(() => {
     if (opts.voiceEnabledByUser) return;
-    introStartedRef.current = false;
-    prevPhaseRef.current = null;
-    milestonesRef.current = { cycle: -1, tens: new Set() };
+    stopElevenLabsPlayback();
+    chainRef.current = Promise.resolve();
     lastDepthCueRef.current = 0;
     lastRateCueRef.current = 0;
+    lastKeepGoingRef.current = 0;
   }, [opts.voiceEnabledByUser]);
 
+  useEffect(() => {
+    if (!opts.voiceMutedForCall) return;
+    stopElevenLabsPlayback();
+    chainRef.current = Promise.resolve();
+  }, [opts.voiceMutedForCall]);
+
   const speak = useCallback((text: string) => {
-    if (!opts.voiceEnabledByUser || !text.trim()) return;
+    if (!text.trim()) return;
 
     chainRef.current = chainRef.current.then(async () => {
+      if (!enabledRef.current || !hardwareRef.current || mutedForCallRef.current) return;
       try {
-        const res = await fetch('/api/voice/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text.trim() }),
-        });
-        if (!res.ok) {
-          const j = await res.json().catch(() => ({}));
-          const msg = typeof j?.error === 'string' ? j.error : `HTTP ${res.status}`;
-          setLastError(msg);
+        const ok = await playElevenLabsLine(text);
+        if (!ok) {
+          setLastError('Voice request failed');
           return;
         }
         setLastError(null);
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        await new Promise<void>((resolve) => {
-          const audio = new Audio(url);
-          const done = () => {
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-          audio.onended = done;
-          audio.onerror = done;
-          void audio.play().catch(done);
-        });
       } catch (e) {
         setLastError(e instanceof Error ? e.message : 'Voice playback failed');
       }
     });
-  }, [opts.voiceEnabledByUser]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,58 +90,9 @@ export function useCprElevenLabsVoice(opts: Options) {
     };
   }, []);
 
-  // Intro once when user enables voice (one-way coach; no user speech).
+  // Depth / rate / encouragement — patch only.
   useEffect(() => {
-    if (!opts.voiceEnabledByUser || introStartedRef.current) return;
-    introStartedRef.current = true;
-    prevPhaseRef.current = opts.phase.phase;
-    milestonesRef.current = { cycle: opts.phase.cyclesCompleted, tens: new Set() };
-
-    speak(
-      'Emergency CPR voice guide. You do not need to speak. Check if the person is responsive. Tap them and shout.'
-    );
-    speak('Look for breathing. Is the chest rising normally?');
-    speak(
-      'If they are not breathing normally, begin CPR. Firm flat surface. Hands on the center of the chest, between the nipples.'
-    );
-    speak('Interlock your fingers. Keep your arms straight. Push hard and fast with the beat.');
-  }, [opts.voiceEnabledByUser, speak, opts.phase.phase, opts.phase.cyclesCompleted]);
-
-  // Phase edges + compression milestones (ElevenLabs: short clips; full 1 to 30 would be dozens of API calls per cycle).
-  useEffect(() => {
-    if (!opts.voiceEnabledByUser) return;
-
-    const { phase, cyclesCompleted, compressionInCycle } = opts.phase;
-    const prev = prevPhaseRef.current;
-
-    if (prev === 'PUSH' && phase === 'BREATHE') {
-      speak('Stop compressions for two rescue breaths. Tilt the head back. Pinch the nose. Watch the chest rise.');
-    }
-    if (prev === 'BREATHE' && phase === 'PUSH') {
-      speak('Resume compressions now. Push hard. Push fast. Stay with the beat.');
-    }
-
-    prevPhaseRef.current = phase;
-
-    if (phase !== 'PUSH') return;
-
-    if (milestonesRef.current.cycle !== cyclesCompleted) {
-      milestonesRef.current = { cycle: cyclesCompleted, tens: new Set() };
-    }
-
-    const tens = milestonesRef.current.tens;
-    for (const n of [10, 20, 30] as const) {
-      if (compressionInCycle >= n && !tens.has(n)) {
-        tens.add(n);
-        const word = n === 10 ? 'Ten.' : n === 20 ? 'Twenty.' : 'Thirty.';
-        speak(word);
-      }
-    }
-  }, [opts.voiceEnabledByUser, opts.phase, speak]);
-
-  // Hardware-aware coaching (depth + rate), debounced.
-  useEffect(() => {
-    if (!opts.voiceEnabledByUser || !opts.hardwareActive || opts.depthCm == null) return;
+    if (!opts.voiceEnabledByUser || opts.voiceMutedForCall || !opts.hardwareActive || opts.depthCm == null) return;
 
     const now = Date.now();
     const d = opts.depthCm;
@@ -173,14 +120,28 @@ export function useCprElevenLabsVoice(opts: Options) {
         if (bpm < 100) speak('Speed up. Push faster with the beat.');
         else speak('Slow down slightly. Stay near one hundred ten beats per minute.');
       }
+      return;
+    }
+
+    if (d >= IDEAL_LO && d <= IDEAL_HI && now - lastKeepGoingRef.current >= HARDWARE_KEEP_GOING_MS) {
+      lastKeepGoingRef.current = now;
+      speak('Good. Keep going. Stay with the beat.');
     }
   }, [
     opts.voiceEnabledByUser,
+    opts.voiceMutedForCall,
     opts.hardwareActive,
     opts.depthCm,
     opts.hardwareBpm,
     speak,
   ]);
+
+  useEffect(() => {
+    return () => {
+      stopElevenLabsPlayback();
+      chainRef.current = Promise.resolve();
+    };
+  }, []);
 
   return { configured, lastError, speak };
 }

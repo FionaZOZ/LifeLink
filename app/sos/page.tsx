@@ -4,11 +4,18 @@ import { useRouter } from 'next/navigation';
 import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
-import { startSosTimer } from '@/components/lifelink/sosTimer';
+import { isSosFlowActive, startSosTimer } from '@/components/lifelink/sosTimer';
+import { SOS_RESPOND_LINES } from '@/lib/voice/sosNarrationScripts';
+import { useElevenLabsScriptedNarration } from '@/lib/voice/useElevenLabsScriptedNarration';
 
 export default function ResponsivenessPage() {
   const router = useRouter();
-  React.useEffect(() => { startSosTimer(); }, []);
+  const [narrationArm, setNarrationArm] = React.useState(false);
+  React.useLayoutEffect(() => {
+    startSosTimer();
+    setNarrationArm(isSosFlowActive());
+  }, []);
+  useElevenLabsScriptedNarration('sos-respond', SOS_RESPOND_LINES, narrationArm);
   return (
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>
