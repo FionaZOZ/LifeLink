@@ -209,30 +209,34 @@ function PatchBanner({ cpr, connected, effectiveProfile, isFallbackProfile = fal
 }
 
 // ── PATIENT PROFILE SHEET HOOK ─────────────────────────────────────────────
-// Detects the patch's profile transitioning from null → object and pops the
-// sheet exactly once per profile fingerprint (so re-pairing the same Arduino
-// during the same session doesn't re-pop it). Also exposes openManually so
-// the user can re-open the sheet from the patch banner after dismissing.
-function usePatchProfileSheet(profile: SerialPatientProfile | null): {
+// Pops the sheet the first time a profile becomes available within a
+// connection session and stays dismissed for the rest of that session.
+// Reconnecting (unplug + plug) resets the ack so the next session pops again.
+// This avoids the fingerprint-dedup edge case where the fallback profile
+// being replaced by the real Arduino profile (different bytes) would re-pop
+// the sheet right after the user dismissed it.
+function usePatchProfileSheet(profile: SerialPatientProfile | null, connected: boolean): {
   open: boolean;
   dismiss: () => void;
   openManually: () => void;
 } {
   const [open, setOpen] = React.useState(false);
-  const ackedFingerprintRef = React.useRef<string | null>(null);
+  const ackedRef = React.useRef(false);
 
+  // Disconnect clears the ack so the next session can pop again.
   React.useEffect(() => {
-    if (!profile) return;
-    const fingerprint = JSON.stringify(profile);
-    if (ackedFingerprintRef.current !== fingerprint) {
-      setOpen(true);
-    }
+    if (!connected) ackedRef.current = false;
+  }, [connected]);
+
+  // Auto-open on first profile of the session.
+  React.useEffect(() => {
+    if (profile && !ackedRef.current) setOpen(true);
   }, [profile]);
 
   const dismiss = React.useCallback(() => {
-    if (profile) ackedFingerprintRef.current = JSON.stringify(profile);
+    ackedRef.current = true;
     setOpen(false);
-  }, [profile]);
+  }, []);
 
   const openManually = React.useCallback(() => {
     if (profile) setOpen(true);
@@ -242,12 +246,10 @@ function usePatchProfileSheet(profile: SerialPatientProfile | null): {
 }
 
 // ── DEMO FALLBACK PROFILE ─────────────────────────────────────────────────
-// When the Arduino sketch is the older firmware that doesn't handle the
-// PROFILE serial command, the bystander would be stuck in "PATCH STREAMING ·
-// LOADING PROFILE…" forever. To keep the demo unblocked we surface this
-// hardcoded profile (matches PaulJiang's sketch character-for-character) as
-// a fallback after 6 s of streaming with no profile JSON. As soon as a real
-// profile arrives, the fallback is replaced.
+// Shown the moment the patch starts streaming, regardless of whether the
+// Arduino sketch supports the PROFILE serial command. Matches PaulJiang's
+// sketch character-for-character so re-flashing the firmware later swaps in
+// equivalent live data without the demo flow changing.
 const DEMO_FALLBACK_PROFILE: SerialPatientProfile = {
   name: 'John Doe',
   dob: '1999-01-01',
@@ -261,7 +263,6 @@ const DEMO_FALLBACK_PROFILE: SerialPatientProfile = {
   physician: { name: 'Dr. Smith', phone: '123-555-1111' },
   notes: 'CPR responder: check allergies and current medication first.',
 };
-const FALLBACK_AFTER_MS = 6000;
 
 function useEffectiveProfile(cpr: ReturnType<typeof useSerialCPR>): {
   profile: SerialPatientProfile | null;
@@ -269,17 +270,9 @@ function useEffectiveProfile(cpr: ReturnType<typeof useSerialCPR>): {
 } {
   const realProfile = cpr.patientProfile;
   const connected = cpr.isConnected && cpr.isReceiving;
-  const [showFallback, setShowFallback] = React.useState(false);
-
-  React.useEffect(() => {
-    if (realProfile) { setShowFallback(false); return; }
-    if (!connected) { setShowFallback(false); return; }
-    const t = setTimeout(() => setShowFallback(true), FALLBACK_AFTER_MS);
-    return () => clearTimeout(t);
-  }, [realProfile, connected]);
 
   if (realProfile) return { profile: realProfile, isFallback: false };
-  if (showFallback) return { profile: DEMO_FALLBACK_PROFILE, isFallback: true };
+  if (connected) return { profile: DEMO_FALLBACK_PROFILE, isFallback: true };
   return { profile: null, isFallback: false };
 }
 
@@ -326,10 +319,10 @@ export default function CPRAssistPage() {
   }, []);
   const elapsedMs = startRef.current ? Date.now() - startRef.current : 0;
 
-  // Effective patient profile: prefer Arduino-supplied data, fall back to a
-  // hardcoded demo profile after 6 s if the firmware doesn't respond to PROFILE.
+  // Effective patient profile: prefer Arduino-supplied data, fall back to the
+  // hardcoded demo profile the instant the patch starts streaming.
   const effective = useEffectiveProfile(cpr);
-  const sheet = usePatchProfileSheet(effective.profile);
+  const sheet = usePatchProfileSheet(effective.profile, connected);
   // Re-issue PROFILE\n a few times if the first request was missed.
   useProfileRetry(cpr);
 
