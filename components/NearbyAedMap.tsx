@@ -59,11 +59,12 @@ function AedMapInner({
     Promise.all([
       import('leaflet'),
       import('react-leaflet'),
-      import('leaflet/dist/leaflet.css'),
     ]).then(([leaflet, rl]) => {
       setL(leaflet.default);
       setReactLeaflet(rl);
       setLeafletReady(true);
+      // Dynamically import CSS
+      import('leaflet/dist/leaflet.css' as any);
     });
   }, []);
 

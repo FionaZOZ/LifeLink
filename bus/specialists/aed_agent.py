@@ -17,6 +17,7 @@ from shared.coverage import (
     get_h3_cell,
 )
 from shared.discovery import register_capability_tags
+from shared.event_bus import publish
 from datasets.ucla_aeds import UCLA_AEDS, UCLA_CENTER, UCLA_CAMPUS_RADIUS_M
 
 logger = logging.getLogger(__name__)
@@ -39,10 +40,34 @@ def create_aed_agent(seed: str) -> Agent:
         ctx.logger.info(f"AED agent started: {agent.address}")
         ctx.logger.info(f"Loaded {len(UCLA_AEDS)} UCLA campus AEDs")
 
+        # Schedule heartbeat every 5 seconds
+        agent.on_interval(period=5.0)(heartbeat)
+
+    async def heartbeat(ctx: Context):
+        """Publish periodic heartbeat to event bus."""
+        await publish(
+            emergency_id="heartbeat",
+            agent="aed",
+            capability="aed-location",
+            phase="heartbeat",
+            summary="AED agent active",
+            data={"address": str(agent.address), "aeds_loaded": len(UCLA_AEDS)}
+        )
+
     @agent.on_message(model=AedQuery, replies={AedResult})
     async def handle_query(ctx: Context, sender: str, msg: AedQuery):
         """Handle AED query requests."""
         ctx.logger.info(f"AED query: location={msg.location}, radius={msg.radius_m}m, transport={msg.transport_mode}")
+
+        emergency_id = getattr(msg, 'emergency_id', 'unknown')
+        await publish(
+            emergency_id=emergency_id,
+            agent="aed",
+            capability="aed-location",
+            phase="request",
+            summary=f"AED query: {msg.location}",
+            data={"location": msg.location, "radius_m": msg.radius_m}
+        )
 
         # Parse location
         try:
@@ -95,19 +120,39 @@ def create_aed_agent(seed: str) -> Agent:
             devices.sort(key=lambda d: d.coverage_score, reverse=True)
 
             h3_cell = get_h3_cell(lat, lon, resolution=9)
-            await ctx.send(sender, AedResult(
+            result = AedResult(
                 devices=devices[:10],
                 primary_source="ucla-ehs",
                 h3_cell=h3_cell,
-            ))
+            )
+            await ctx.send(sender, result)
+
+            await publish(
+                emergency_id=emergency_id,
+                agent="aed",
+                capability="aed-location",
+                phase="result",
+                summary=f"Found {len(devices[:10])} AEDs",
+                data={"count": len(devices[:10]), "h3_cell": h3_cell}
+            )
         else:
             ctx.logger.info("Query outside UCLA campus, using OpenAEDMap fallback (mocked)")
             h3_cell = get_h3_cell(lat, lon, resolution=9)
-            await ctx.send(sender, AedResult(
+            result = AedResult(
                 devices=[],
                 primary_source="openaedmap_unavailable",
                 h3_cell=h3_cell,
-            ))
+            )
+            await ctx.send(sender, result)
+
+            await publish(
+                emergency_id=emergency_id,
+                agent="aed",
+                capability="aed-location",
+                phase="result",
+                summary="Query outside UCLA campus",
+                data={"h3_cell": h3_cell}
+            )
 
     async def chat_handler(ctx: Context, sender: str, msg):
         """Handle chat messages from ASI:One."""

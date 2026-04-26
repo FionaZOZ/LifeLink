@@ -3,21 +3,11 @@ import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Screen, EmergencyBanner } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
-import { RadiusMap, type LiveHelper } from '@/components/lifelink/RadiusMap';
+import { ScenarioMap, AgentEvent } from '@/components/lifelink/ScenarioMap';
 import { ResponderRow } from '@/components/lifelink/Pieces';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { useHelperFlow } from '@/components/lifelink/helperFlow';
 import { useT } from '@/components/lifelink/i18n';
-
-// Map each helperFlow id to its visual marker on the RadiusMap. The startX/Y
-// values match the legacy hardcoded pins so the map composition stays the
-// same — only the dynamic state (en route → arriving → on scene) is new.
-const HELPER_MAP: Record<string, { initial: string; startX: number; startY: number; routePath: string; badge?: string }> = {
-  marcus: { initial: 'M', startX: 60,  startY: 380, routePath: 'M 60 380 Q 130 320 195 237' },
-  sarah:  { initial: 'S', startX: 340, startY: 350, routePath: 'M 340 350 Q 270 280 195 237', badge: 'AED' },
-  jordan: { initial: 'J', startX: 320, startY: 80,  routePath: 'M 320 80 Q 260 130 195 237' },
-  ems:    { initial: 'E', startX: 30,  startY: 80,  routePath: 'M 30 80 Q 110 150 195 237' },
-};
 
 const colorForState = (state: string): string => {
   if (state === 'on_scene') return X.GREEN;
@@ -37,23 +27,29 @@ export default function NearbyLivePage() {
   // the original recovery → CPR-guide flow.
   const fromConscious = params?.get('from') === 'conscious';
 
-  const liveHelpers: LiveHelper[] = flow.rows
-    .map(r => {
-      const meta = HELPER_MAP[r.helper.id];
-      if (!meta) return null;
-      return {
-        id: r.helper.id,
-        initial: meta.initial,
-        startX: meta.startX,
-        startY: meta.startY,
-        color: r.helper.color,
-        state: r.state,
-        etaText: r.rowEtaText,
-        badge: meta.badge,
-        routePath: meta.routePath,
-      } as LiveHelper;
-    })
-    .filter((h): h is LiveHelper => h !== null);
+  // Convert helperFlow state to mock AgentEvents for the ScenarioMap
+  const mockEvents = React.useMemo(() => {
+    const events: AgentEvent[] = [];
+    let timestamp = 0;
+
+    flow.rows.forEach(r => {
+      if (r.state !== 'queued') {
+        // Add event for each helper that's been activated
+        events.push({
+          ts: new Date(Date.now() + timestamp * 1000).toISOString(),
+          emergency_id: 'simulation',
+          agent: r.helper.id,
+          capability: 'response',
+          phase: r.state === 'on_scene' ? 'result' : r.state === 'accepted' ? 'working' : 'request',
+          summary: `${r.helper.name} ${r.state}`,
+          data: {},
+        });
+        timestamp++;
+      }
+    });
+
+    return events;
+  }, [flow.rows]);
 
   const acceptedCount = flow.acceptedCount;
   const onSceneCount = flow.onSceneCount;
@@ -80,7 +76,7 @@ export default function NearbyLivePage() {
       </div>
 
       <div style={{ position: 'absolute', top: 100, left: 0, right: 0, bottom: 230 }}>
-        <RadiusMap mode="live" helpers={liveHelpers}/>
+        <ScenarioMap scenarioId="royce-hall" events={mockEvents}/>
       </div>
 
       <div style={{

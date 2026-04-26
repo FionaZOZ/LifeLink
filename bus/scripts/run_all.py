@@ -6,6 +6,8 @@ processes or on Agentverse.
 import os
 import sys
 import logging
+import asyncio
+import multiprocessing
 from dotenv import load_dotenv
 
 # Add parent directory to path to import bus modules
@@ -30,6 +32,12 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def run_event_server():
+    """Run event server in subprocess."""
+    from scripts.event_server import main as event_main
+    event_main()
 
 
 def main():
@@ -92,6 +100,15 @@ def main():
     print(f"Drone         {drone.address}   \"UAV-AED delivery (Schierbeck 2023)\"")
     print("=" * 80)
     print()
+
+    # Start the event server in a separate process
+    event_port = int(os.getenv("BUS_EVENT_PORT", "8010"))
+    print(f"Starting event server on port {event_port}...")
+
+    event_process = multiprocessing.Process(target=run_event_server, daemon=True)
+    event_process.start()
+
+    print(f"Event server started at http://localhost:{event_port}")
     print("Press Ctrl+C to stop.")
     print()
 
@@ -100,6 +117,8 @@ def main():
         bureau.run()
     except KeyboardInterrupt:
         logger.info("Shutting down...")
+        event_process.terminate()
+        event_process.join(timeout=2)
 
 
 if __name__ == "__main__":

@@ -28,6 +28,14 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# secrets — NEVER commit
+secrets.sh
+secrets.local
+*.secret
+
+# agentverse local deploy state
+agentverse-deploy/.deployed.json
+
 # python bytecode
 __pycache__/
 *.pyc

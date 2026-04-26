@@ -1,0 +1,44 @@
+# Agentverse deployment manifest, read by deploy.py.
+# Each [[agent]] block describes one hosted agent.
+#
+# `name` is what shows up in ASI:One search and in the Agentverse dashboard.
+# `file` is the Python source to upload.
+# `secrets` is a list of env-var names — deploy.py reads each from your shell
+#   and posts it to the agent's Secrets panel via the Agentverse API.
+#   Names with `?` after them are optional; missing ones are skipped.
+
+[[agent]]
+name    = "CardiacLink Emergency Coordinator"
+file    = "coordinator.py"
+secrets = [
+  "ASI1_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "MONGODB_URI",
+  "MONGODB_DB",
+  "AED_AGENT_ADDRESS",
+  "EMS_AGENT_ADDRESS",
+  "HANDOFF_AGENT_ADDRESS",
+  "ELEVENLABS_API_KEY?",
+]
+
+[[agent]]
+name    = "UCLA AED Locator + Route Optimizer"
+file    = "aed_agent.py"
+secrets = ["ASI1_API_KEY"]
+
+[[agent]]
+name    = "LAFD EMS + AED Drone Dispatch"
+file    = "ems_agent.py"
+secrets = [
+  "ASI1_API_KEY",
+  "WHAT3WORDS_API_KEY?",
+]
+
+[[agent]]
+name    = "FHIR R4 Hospital Handoff"
+file    = "handoff_agent.py"
+secrets = [
+  "ASI1_API_KEY",
+  "MONGODB_URI",
+  "MONGODB_DB",
+]

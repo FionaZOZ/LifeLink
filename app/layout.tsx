@@ -14,12 +14,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isDev = process.env.NODE_ENV !== 'production';
+
   return (
     <html lang="en">
       <body>
         <Stage>{children}</Stage>
         <RoleSwitcher />
         <IncomingCallTrigger />
+        {isDev && (
+          <a
+            href="/dev/dashboard"
+            className="fixed bottom-4 right-4 rounded-full bg-zinc-800 px-4 py-2 text-xs font-mono text-zinc-100 shadow-lg hover:bg-zinc-700"
+            title="Developer Dashboard"
+          >
+            🩺 dev
+          </a>
+        )}
       </body>
     </html>
   );

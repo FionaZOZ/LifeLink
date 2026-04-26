@@ -172,6 +172,26 @@ export function OrchestrationDrawer({
           )}
         </div>
 
+        {/* Persistence badge */}
+        {state.persistence.status !== 'idle' && (
+          <div className="px-4 py-2 border-t border-zinc-800 shrink-0">
+            <div className="flex items-center justify-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                state.persistence.status === 'persisted' ? 'bg-emerald-500' :
+                state.persistence.status === 'persisting' ? 'bg-amber-500 animate-pulse' :
+                state.persistence.status === 'failed' ? 'bg-red-500' :
+                'bg-zinc-600'
+              }`} />
+              <span className="text-[10px] text-zinc-400 font-mono">
+                {state.persistence.status === 'persisted' && `MongoDB Atlas — record ${state.persistence.recordId?.slice(0, 8)}…`}
+                {state.persistence.status === 'persisting' && 'Persisting FHIR bundle to MongoDB Atlas…'}
+                {state.persistence.status === 'failed' && `Persistence failed: ${state.persistence.error}`}
+                {state.persistence.status === 'unavailable' && 'MongoDB not configured'}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Footer — citation strip */}
         <div className="px-4 py-2 border-t border-zinc-800 shrink-0">
           <div className="text-[9px] text-zinc-600 text-center tracking-wide">

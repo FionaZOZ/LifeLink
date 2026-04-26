@@ -10,6 +10,7 @@ from uagents import Agent, Context
 from shared.protocols import EmsDispatchRequest, EmsDispatchResult
 from shared.chat import enable_chat, extract_text
 from shared.discovery import register_capability_tags
+from shared.event_bus import publish
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,20 @@ def create_ems_agent(seed: str) -> Agent:
             ctx.logger.info("What3Words API key detected")
         else:
             ctx.logger.info("What3Words API key not set -- using synthesized words")
+
+        # Schedule heartbeat every 5 seconds
+        agent.on_interval(period=5.0)(heartbeat)
+
+    async def heartbeat(ctx: Context):
+        """Publish periodic heartbeat to event bus."""
+        await publish(
+            emergency_id="heartbeat",
+            agent="ems",
+            capability="ems-dispatch",
+            phase="heartbeat",
+            summary="EMS agent active",
+            data={"address": str(agent.address)}
+        )
 
     @agent.on_message(model=EmsDispatchRequest, replies={EmsDispatchResult})
     async def handle_dispatch(ctx: Context, sender: str, msg: EmsDispatchRequest):
