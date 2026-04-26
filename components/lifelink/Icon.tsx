@@ -6,7 +6,7 @@ type IconName =
   | 'home' | 'message' | 'user' | 'bell' | 'shield' | 'zap' | 'mic'
   | 'volume' | 'clock' | 'compass' | 'plus' | 'minus' | 'cross'
   | 'aed' | 'walk' | 'shuffle' | 'siren' | 'plug' | 'qr' | 'activity'
-  | 'pip';
+  | 'pip' | 'globe';
 
 type Props = {
   name: IconName;
@@ -103,6 +103,8 @@ export function Icon({ name, size = 24, color = 'currentColor', stroke = 1.8, fi
       return <svg {...svgProps}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
     case 'pip':
       return <svg {...svgProps}><rect x="3" y="3" width="13" height="13" rx="2"/><rect x="10" y="10" width="11" height="11" rx="2"/></svg>;
+    case 'globe':
+      return <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></svg>;
     default:
       return <svg {...svgProps}><circle cx="12" cy="12" r="10"/></svg>;
   }

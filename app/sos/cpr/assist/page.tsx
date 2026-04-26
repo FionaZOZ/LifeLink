@@ -42,6 +42,7 @@ import {
 } from '@/components/lifelink/sosTimer';
 import { ensureBeatAudioUnlocked } from '@/lib/compressionBeatSound';
 import { stopElevenLabsPlayback } from '@/lib/voice/playElevenLabsLine';
+import { useT } from '@/components/lifelink/i18n';
 
 function fmtMmSs(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -50,24 +51,26 @@ function fmtMmSs(seconds: number) {
 }
 
 // ── voice cue lists ───────────────────────────────────────────────────────
-const PUSH_CUES = [
-  '"Push hard. Push fast."',
-  '"Center of the chest."',
-  '"Twice per second."',
-  '"Use your body weight."',
-  '"Don\'t stop pushing."',
-  '"Stay strong — keep the rhythm."',
+// Cues are stored as i18n keys; the components resolve them via t() at render
+// time so they live-update when the language is switched.
+const PUSH_CUE_KEYS = [
+  'cpr.assist.cue.push1',
+  'cpr.assist.cue.push2',
+  'cpr.assist.cue.push3',
+  'cpr.assist.cue.push4',
+  'cpr.assist.cue.push5',
+  'cpr.assist.cue.push6',
 ];
-const BREATH_CUES = [
-  '"Tilt the head back. Pinch the nose."',
-  '"Two slow breaths — watch the chest rise."',
-  '"Seal your mouth over theirs. Blow gently."',
+const BREATH_CUE_KEYS = [
+  'cpr.assist.cue.breath1',
+  'cpr.assist.cue.breath2',
+  'cpr.assist.cue.breath3',
 ];
-const HW_CUES_OK = [
-  '"Good depth. Keep going."',
-  '"Solid rhythm — hold that depth."',
-  '"You\'re right in the band."',
-  '"Strong compressions — don\'t stop."',
+const HW_CUE_OK_KEYS = [
+  'cpr.assist.cue.depthOk1',
+  'cpr.assist.cue.depthOk2',
+  'cpr.assist.cue.depthOk3',
+  'cpr.assist.cue.depthOk4',
 ];
 
 type VoiceCoachProps = {
@@ -134,6 +137,7 @@ function VoiceCoachRow({ configured, enabled, onToggle, error }: VoiceCoachProps
 
 // ── PHASE RING CIRCLE (shared between both layouts) ───────────────────────
 function PhaseRingCircle({ phase, size = 220, sessionFrozen = false }: { phase: PhaseInfo; size?: number; sessionFrozen?: boolean }) {
+  const { t } = useT();
   const isPush = phase.phase === 'PUSH';
   const innerSize = Math.round(size * 0.76);
   const ringR = (size - 18) / 2; // sit just inside the SVG bounds
@@ -165,13 +169,13 @@ function PhaseRingCircle({ phase, size = 220, sessionFrozen = false }: { phase: 
         color: '#fff',
       }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.95 }}>
-          {isPush ? 'PUSH' : 'BREATHE'}
+          {isPush ? t('cpr.assist.push') : t('cpr.assist.breathe')}
         </div>
         <div style={{ fontSize: Math.round(innerSize * 0.3), fontWeight: 700, fontFamily: FONT.display, lineHeight: 1, marginTop: 2 }}>
           {isPush ? `${phase.compressionInCycle}/${COMPRESSIONS_PER_CYCLE}` : `${phase.breathInCycle}/${BREATHS_PER_CYCLE}`}
         </div>
         <div style={{ fontSize: 10, opacity: 0.85, marginTop: 4 }}>
-          {isPush ? `${TARGET_BPM} BPM` : 'tilt head · pinch nose'}
+          {isPush ? `${TARGET_BPM} BPM` : t('cpr.assist.ring.tiltPinch')}
         </div>
       </div>
     </div>
@@ -181,6 +185,7 @@ function PhaseRingCircle({ phase, size = 220, sessionFrozen = false }: { phase: 
 // ── PAGE: auto-switches between phone-only and hardware-connected layouts ─
 export default function CPRAssistPage() {
   const router = useRouter();
+  const { t } = useT();
   const cpr = useSosSerialCpr();
   const connected = cpr.isConnected && cpr.isReceiving;
 
@@ -468,7 +473,7 @@ export default function CPRAssistPage() {
         open={profileSheetOpen}
         onDismiss={dismissAssistProfile}
         syncedAt={effective.isFallback ? null : cpr.profileSyncedAt}
-        syncError={effective.isFallback ? 'Demo profile · Arduino sketch needs reflash for live data' : cpr.profileSyncError}
+        syncError={effective.isFallback ? t('cpr.assist.patch.demoSyncErr') : cpr.profileSyncError}
       />
       <AedGuideModal
         open={aedGuideOpen}
@@ -500,14 +505,15 @@ export default function CPRAssistPage() {
 // based on the assumption that the user is matching the metronome.
 // ───────────────────────────────────────────────────────────────────────────
 function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, onOpenProfile, voiceCoach, toolbar, arrival, sessionFrozen }: { cpr: SerialCpr; elapsedMs: number; effectiveProfile?: SerialPatientProfile | null; isFallbackProfile?: boolean; onOpenProfile?: () => void; voiceCoach: VoiceCoachProps; toolbar: AssistToolbarProps; arrival: AssistArrivalProps; sessionFrozen: boolean }) {
+  const { t } = useT();
   const phase = derivePhase(elapsedMs);
   const isPush = phase.phase === 'PUSH';
   const cycleNum = phase.cyclesCompleted + 1;
 
-  const cueList = isPush ? PUSH_CUES : BREATH_CUES;
+  const cueKeys = isPush ? PUSH_CUE_KEYS : BREATH_CUE_KEYS;
   const cueColor = isPush ? X.RED : X.BLUE;
-  const cueIdx = Math.floor(elapsedMs / 4500) % cueList.length;
-  const cue = cueList[cueIdx];
+  const cueIdx = Math.floor(elapsedMs / 4500) % cueKeys.length;
+  const cue = t(cueKeys[cueIdx]);
 
   return (
     <Screen bg={X.DARK} padTop={0}>
@@ -518,7 +524,7 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, opacity: sessionFrozen ? 0.55 : 1 }}>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>
-            ● CPR · CYCLE {String(cycleNum).padStart(2, '0')}
+            {t('cpr.assist.cycleTag', { n: String(cycleNum).padStart(2, '0') })}
           </div>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>{fmtMmSs(Math.floor(elapsedMs / 1000))}</div>
         </div>
@@ -537,19 +543,19 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
         {/* Stats row */}
         <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.1)', opacity: sessionFrozen ? 0.55 : 1 }}>
           <div>
-            <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>COMPRESSIONS</div>
+            <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>{t('cpr.assist.stat.compressions')}</div>
             <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -1 }}>{phase.totalCompressions}</div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>since you started</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>{t('cpr.assist.stat.compressions.sub')}</div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>CYCLES</div>
+            <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>{t('cpr.assist.stat.cycles')}</div>
             <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -1 }}>{phase.cyclesCompleted}</div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>30:2 completed</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>{t('cpr.assist.stat.cycles.sub')}</div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>RATE</div>
+            <div style={{ fontSize: 10, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>{t('cpr.assist.stat.rate')}</div>
             <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -1, color: X.GREEN }}>{TARGET_BPM}</div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>bpm target</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>{t('cpr.assist.stat.rate.sub')}</div>
           </div>
         </div>
 
@@ -584,6 +590,7 @@ function PhoneOnlyLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, 
 // LAYOUT B — LifeLink Patch connected. Sensor drives depth bar + beat scale.
 // ───────────────────────────────────────────────────────────────────────────
 function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, onOpenProfile, voiceCoach, toolbar, arrival, sessionFrozen }: { cpr: SerialCpr; elapsedMs: number; effectiveProfile?: SerialPatientProfile | null; isFallbackProfile?: boolean; onOpenProfile?: () => void; voiceCoach: VoiceCoachProps; toolbar: AssistToolbarProps; arrival: AssistArrivalProps; sessionFrozen: boolean }) {
+  const { t } = useT();
   const liveDepth = cpr.lastSample ? voltageToDepth(cpr.lastSample.voltage) : 0;
   const liveCount = cpr.lastSample?.count ?? 0;
   const liveRate = useCompressionRateBpm(cpr.lastSample?.count ?? 0);
@@ -602,12 +609,12 @@ function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, o
   if (!inBand) {
     cueBg = liveDepth < IDEAL_LO ? X.RED : X.AMBER;
     cueText = liveDepth < IDEAL_LO
-      ? `"Push harder · ${liveDepth.toFixed(1)} cm. Use your body weight."`
-      : `"Ease up — ${liveDepth.toFixed(1)} cm is too deep."`;
+      ? t('cpr.assist.depth.cuePushHarder', { d: liveDepth.toFixed(1) })
+      : t('cpr.assist.depth.cueEaseUp',     { d: liveDepth.toFixed(1) });
   } else {
     cueBg = X.GREEN;
-    const idx = Math.floor(elapsedMs / 4500) % HW_CUES_OK.length;
-    cueText = HW_CUES_OK[idx];
+    const idx = Math.floor(elapsedMs / 4500) % HW_CUE_OK_KEYS.length;
+    cueText = t(HW_CUE_OK_KEYS[idx]);
   }
 
   return (
@@ -618,7 +625,7 @@ function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, o
         <PatchBanner cpr={cpr} connected={true} effectiveProfile={effectiveProfile} isFallbackProfile={isFallbackProfile} onOpenProfile={onOpenProfile}/>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, opacity: sessionFrozen ? 0.55 : 1 }}>
-          <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>● CPR · CYCLE {String(cycle).padStart(2, '0')}</div>
+          <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>{t('cpr.assist.cycleTag', { n: String(cycle).padStart(2, '0') })}</div>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.4 }}>{fmtMmSs(Math.floor(elapsedMs / 1000))}</div>
         </div>
         <CPRToolbar
@@ -640,19 +647,19 @@ function HardwareLayout({ cpr, elapsedMs, effectiveProfile, isFallbackProfile, o
 
         <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', opacity: sessionFrozen ? 0.55 : 1 }}>
           <div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>RATE</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>{t('cpr.assist.stat.rate')}</div>
             <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.8, color: displayedRate >= 100 && displayedRate <= 120 ? X.GREEN : X.AMBER }}>{displayedRate || '—'}</div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>bpm · {!displayedRate ? 'building rate…' : displayedRate >= 100 && displayedRate <= 120 ? 'ok' : displayedRate < 100 ? 'too slow' : 'too fast'}</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>{!displayedRate ? t('cpr.assist.stat.bpmStatus.building') : displayedRate >= 100 && displayedRate <= 120 ? t('cpr.assist.stat.bpmStatus.ok') : displayedRate < 100 ? t('cpr.assist.stat.bpmStatus.tooSlow') : t('cpr.assist.stat.bpmStatus.tooFast')}</div>
           </div>
           <div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>RECOIL</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>{t('cpr.assist.stat.recoil')}</div>
             <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.8, color: X.AMBER }}>92<span style={{ fontSize: 11 }}>%</span></div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: X.AMBER }}>let go fully</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: X.AMBER }}>{t('cpr.assist.stat.recoil.sub')}</div>
           </div>
           <div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>COUNT</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}>{t('cpr.assist.stat.count')}</div>
             <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.8 }}>{liveCount}</div>
-            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>sensor live</div>
+            <div style={{ fontSize: 9, fontFamily: FONT.mono, color: 'rgba(255,255,255,0.45)' }}>{t('cpr.assist.stat.count.sub')}</div>
           </div>
         </div>
 

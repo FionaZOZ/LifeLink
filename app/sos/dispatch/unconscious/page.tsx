@@ -7,9 +7,11 @@ import { SlideToConfirm } from '@/components/lifelink/SlideToConfirm';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { markDispatchConfirmed, useDispatchElapsed } from '@/components/lifelink/sosTimer';
 import { useHelperFlow } from '@/components/lifelink/helperFlow';
+import { useT } from '@/components/lifelink/i18n';
 
 export default function DispatchUnconsciousPage() {
   const router = useRouter();
+  const { t } = useT();
   const { seconds: dispatchSec, confirmed: dispatched } = useDispatchElapsed();
   const flow = useHelperFlow();
 
@@ -21,14 +23,22 @@ export default function DispatchUnconsciousPage() {
   let helpersTitle: string;
   let helpersSub: string;
   if (alertedCount === 0) {
-    helpersTitle = 'Notifying nearby helpers…';
-    helpersSub = 'Sending alerts within 2 mi';
+    helpersTitle = t('sos.disp.un.notifying');
+    helpersSub = t('sos.disp.un.alertsSending');
   } else if (acceptedRows.length === 0) {
-    helpersTitle = `${alertedCount} ${alertedCount === 1 ? 'helper' : 'helpers'} notified`;
-    helpersSub = 'Waiting for accept';
+    helpersTitle = alertedCount === 1
+      ? t('sos.disp.un.notifiedOne', { n: alertedCount })
+      : t('sos.disp.un.notifiedMany', { n: alertedCount });
+    helpersSub = t('sos.disp.un.waitingAccept');
   } else if (closestEnRoute) {
-    helpersTitle = `${closestEnRoute.helper.name.split(' ·')[0]} on the way · ${acceptedRows.length} of ${alertedCount} accepted`;
-    helpersSub = closestEnRoute.rowEtaText === 'ON SCENE' ? 'on scene' : `ETA ${closestEnRoute.rowEtaText} · AED on the way`;
+    helpersTitle = t('sos.disp.un.onTheWay', {
+      name: closestEnRoute.helper.name.split(' ·')[0],
+      a: acceptedRows.length,
+      n: alertedCount,
+    });
+    helpersSub = closestEnRoute.rowEtaText === 'ON SCENE'
+      ? t('sos.disp.un.onScene')
+      : t('sos.disp.un.eta', { time: closestEnRoute.rowEtaText });
   } else {
     helpersSub = ''; helpersTitle = '';
   }
@@ -39,10 +49,10 @@ export default function DispatchUnconsciousPage() {
 
       <div style={{ padding: '70px 22px 0' }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>
-          {dispatched ? '● UNRESPONSIVE · DISPATCH SENT' : '● UNRESPONSIVE · CONFIRM TO DISPATCH'}
+          {dispatched ? t('sos.disp.un.statusSent') : t('sos.disp.un.statusConfirm')}
         </div>
-        <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05 }}>
-          {dispatched ? <>Help is coming.<br/>Now check breathing.</> : <>Slide to call 911<br/>and dispatch helpers.</>}
+        <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05, whiteSpace: 'pre-line' }}>
+          {dispatched ? t('sos.disp.un.titleSent') : t('sos.disp.un.titleConfirm')}
         </div>
 
         {/* 911 card — pre-dispatch slider, post-dispatch ringing card */}
@@ -53,13 +63,13 @@ export default function DispatchUnconsciousPage() {
                 <Icon name="phone" size={16} color={X.GREEN} stroke={2.2}/>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>Call 911 + alert helpers</div>
-                <div style={{ fontSize: 11, color: X.INK2 }}>Slide the handle right to dispatch — release to cancel.</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{t('sos.disp.un.callBoth')}</div>
+                <div style={{ fontSize: 11, color: X.INK2 }}>{t('sos.disp.un.slideHelp')}</div>
               </div>
             </div>
             <SlideToConfirm
-              label="Slide to call 911"
-              confirmedLabel="911 dispatched"
+              label={t('sos.disp.un.slideLabel')}
+              confirmedLabel={t('sos.disp.un.slideConfirmed')}
               iconName="phone"
               fillBg={X.GREEN}
               thumbBg={X.GREEN}
@@ -75,8 +85,8 @@ export default function DispatchUnconsciousPage() {
               </div>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: X.GREEN }}>911 — connecting</div>
-              <div style={{ fontSize: 11, color: X.GREEN, opacity: 0.85, fontFamily: FONT.mono }}>RINGING · {ringText} · location sent</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: X.GREEN }}>{t('sos.disp.un.connecting')}</div>
+              <div style={{ fontSize: 11, color: X.GREEN, opacity: 0.85, fontFamily: FONT.mono }}>{t('sos.disp.un.ringing', { time: ringText })}</div>
             </div>
           </div>
         )}
@@ -103,10 +113,10 @@ export default function DispatchUnconsciousPage() {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: X.BLUE }}>
-              {!dispatched ? '3 nearby helpers waiting' : helpersTitle}
+              {!dispatched ? t('sos.disp.un.waiting') : helpersTitle}
             </div>
             <div style={{ fontSize: 11, color: X.BLUE, opacity: 0.85 }}>
-              {!dispatched ? 'Closest 0.3 mi · AED on the way' : helpersSub}
+              {!dispatched ? t('sos.disp.un.closest') : helpersSub}
             </div>
           </div>
         </div>
@@ -116,8 +126,8 @@ export default function DispatchUnconsciousPage() {
             <Icon name="map-pin" size={20} color={X.RED} stroke={2.2}/>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>123 Main St · Westwood Plaza</div>
-            <div style={{ fontSize: 11, color: X.INK2, fontFamily: FONT.mono }}>GPS ±4 m · tap to add floor / room</div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>{t('sos.disp.un.address')}</div>
+            <div style={{ fontSize: 11, color: X.INK2, fontFamily: FONT.mono }}>{t('sos.disp.un.gps')}</div>
           </div>
         </div>
       </div>
@@ -135,7 +145,7 @@ export default function DispatchUnconsciousPage() {
             transition: 'background 200ms ease-out, color 200ms ease-out',
           }}
         >
-          {dispatched ? 'CHECK BREATHING →' : 'CALL 911 FIRST'}
+          {dispatched ? t('sos.disp.un.btnNext') : t('sos.disp.un.btnDisabled')}
         </button>
       </div>
     </Screen>

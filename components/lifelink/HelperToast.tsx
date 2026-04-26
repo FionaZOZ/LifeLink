@@ -3,11 +3,13 @@ import * as React from 'react';
 import { Icon } from './Icon';
 import { X, FONT } from './tokens';
 import { useLatestAcceptanceEvent } from './helperFlow';
+import { useT } from './i18n';
 
 const DISMISS_THRESHOLD_PX = 28;
 
 export function HelperToast() {
   const { event, dismiss } = useLatestAcceptanceEvent();
+  const { t } = useT();
   const [shown, setShown] = React.useState(false);
   const [dragY, setDragY] = React.useState(0);
   const draggingRef = React.useRef(false);
@@ -96,7 +98,7 @@ export function HelperToast() {
           <div style={{ fontSize: 13, fontWeight: 800, fontFamily: FONT.body, letterSpacing: -0.1 }}>{event.title}</div>
           <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 0.4, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>{event.sub}</div>
         </div>
-        <span style={{ fontSize: 9, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.GREEN, fontWeight: 800 }}>ON THE WAY</span>
+        <span style={{ fontSize: 9, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.GREEN, fontWeight: 800 }}>{t('helperToast.onTheWay')}</span>
       </div>
     </div>
   );

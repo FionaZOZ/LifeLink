@@ -4,10 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useDemoRole, isVolunteer } from './demoRole';
 import { Icon } from './Icon';
 import { X, FONT } from './tokens';
+import { useT } from './i18n';
 
 export function IncomingCallTrigger() {
   const router = useRouter();
   const [role] = useDemoRole();
+  const { t } = useT();
   if (!isVolunteer(role)) return null;
 
   return (
@@ -36,7 +38,7 @@ export function IncomingCallTrigger() {
       >
         <Icon name="phone" size={13} color="#fff" stroke={2.4}/>
       </span>
-      RING VOLUNTEER
+      {t('demo.ringVolunteer')}
     </button>
   );
 }

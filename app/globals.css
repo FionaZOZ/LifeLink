@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "leaflet/dist/leaflet.css";
@@ -70,9 +70,9 @@
     --ll-blue-bg: #E6EEFD;
     --ll-dark: #0B1018;
 
-    --ll-display: 'Space Grotesk', -apple-system, system-ui, sans-serif;
-    --ll-mono: 'JetBrains Mono', ui-monospace, monospace;
-    --ll-body: 'Inter', -apple-system, "SF Pro Text", system-ui, sans-serif;
+    --ll-display: 'Space Grotesk', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', -apple-system, system-ui, sans-serif;
+    --ll-mono: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', ui-monospace, monospace;
+    --ll-body: 'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', -apple-system, "SF Pro Text", system-ui, sans-serif;
   }
   .dark {
     --background: oklch(0.145 0 0);

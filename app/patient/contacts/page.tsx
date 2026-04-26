@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { Screen, TopBar } from '@/components/lifelink/Screen';
 import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
+import { useT } from '@/components/lifelink/i18n';
 
 export default function PatientContactsPage() {
+  const { t } = useT();
   return (
     <Screen>
       <TopBar
-        title="Emergency contacts"
+        title={t('pat.contacts.title')}
         leading="back"
         backHref="/profile"
         trailing={<Icon name="plus" size={20} color={X.INK} stroke={2.4}/>}
@@ -20,17 +22,17 @@ export default function PatientContactsPage() {
             <Icon name="heart" size={16} color="#fff" stroke={2.2} fill="#fff"/>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: X.RED }}>If you collapse, we&apos;ll call these people</div>
-            <div style={{ fontSize: 11, color: X.RED_DEEP }}>in this order, until someone answers.</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: X.RED }}>{t('pat.contacts.banner')}</div>
+            <div style={{ fontSize: 11, color: X.RED_DEEP }}>{t('pat.contacts.bannerSub')}</div>
           </div>
         </div>
 
-        <div style={{ marginTop: 14, fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>CALL ORDER</div>
+        <div style={{ marginTop: 14, fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>{t('pat.contacts.callOrder')}</div>
         <div style={{ marginTop: 8, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, overflow: 'hidden' }}>
           {[
-            { n: 'David Tanaka', r: 'Husband · primary', p: '+1 (555) 014-2233' },
-            { n: 'Mei Tanaka', r: 'Daughter', p: '+1 (555) 014-9912' },
-            { n: 'Dr. Patel', r: 'Cardiologist', p: '+1 (555) 002-7700' },
+            { n: 'David Tanaka', r: t('pat.contacts.role.husband'),  p: '+1 (555) 014-2233' },
+            { n: 'Mei Tanaka',   r: t('pat.contacts.role.daughter'), p: '+1 (555) 014-9912' },
+            { n: 'Dr. Patel',    r: t('pat.contacts.role.cardio'),   p: '+1 (555) 002-7700' },
           ].map((c, i, a) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderBottom: i < a.length-1 ? `1px solid ${X.LINE}` : 'none' }}>
               <div style={{ width: 28, height: 28, borderRadius: 14, background: X.RED, color: '#fff', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i+1}</div>
@@ -46,8 +48,8 @@ export default function PatientContactsPage() {
         <div style={{ marginTop: 14, padding: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Icon name="shield" size={18} color={X.GREEN} stroke={2}/>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>Share live ECG with cardiologist</div>
-            <div style={{ fontSize: 11, color: X.INK2 }}>Only during an active emergency</div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{t('pat.contacts.share')}</div>
+            <div style={{ fontSize: 11, color: X.INK2 }}>{t('pat.contacts.shareSub')}</div>
           </div>
           <div style={{ width: 42, height: 24, borderRadius: 12, background: X.GREEN, position: 'relative' }}>
             <div style={{ position: 'absolute', right: 2, top: 2, width: 20, height: 20, borderRadius: 10, background: '#fff' }}/>
@@ -57,7 +59,7 @@ export default function PatientContactsPage() {
 
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 22px 24px', background: `linear-gradient(to bottom, ${X.BG}00 0%, ${X.BG} 35%)` }}>
         <Link href="/patient/hardware" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px 20px', background: X.RED, color: '#fff', borderRadius: 999, fontSize: 15, fontWeight: 800, letterSpacing: 0.3, boxShadow: '0 8px 24px rgba(225,29,46,0.3)' }}>
-          Pair your patch
+          {t('pat.contacts.cta')}
           <Icon name="chevron-right" size={18} color="#fff" stroke={2.4}/>
         </Link>
       </div>

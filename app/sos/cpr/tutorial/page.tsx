@@ -11,6 +11,7 @@ import { useEffectiveProfile, useProfileRetry } from '@/lib/cpr/patchSerialSessi
 import { usePatchProfileSheet } from '@/lib/cpr/usePatchProfileSheet';
 import { SOS_CPR_TUTORIAL_LINES } from '@/lib/voice/sosNarrationScripts';
 import { useElevenLabsScriptedNarration } from '@/lib/voice/useElevenLabsScriptedNarration';
+import { useT } from '@/components/lifelink/i18n';
 
 function PhotoCard({ label, sub, src, alt }: { label: string; sub: string; src: string; alt: string }) {
   return (
@@ -29,6 +30,7 @@ function PhotoCard({ label, sub, src, alt }: { label: string; sub: string; src: 
 
 export default function CPRTutorialPage() {
   const router = useRouter();
+  const { t } = useT();
   const cpr = useSosSerialCpr();
   const connected = cpr.isConnected && cpr.isReceiving;
   const effective = useEffectiveProfile(cpr);
@@ -52,32 +54,32 @@ export default function CPRTutorialPage() {
 
       {/* scrollable body — leave room for patch row + CTAs */}
       <div style={{ position: 'absolute', top: 50, left: 0, right: 0, bottom: 138, overflowY: 'auto', padding: '20px 22px 24px' }}>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>BEFORE YOU START</div>
-        <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.1 }}>
-          Place your hands<br/>like this.
+        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>{t('cpr.tut.beforeYouStart')}</div>
+        <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.1, whiteSpace: 'pre-line' }}>
+          {t('cpr.tut.title')}
         </div>
 
         {/* Stacked, full-width photos so the anatomical detail stays legible */}
         <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <PhotoCard label="① CENTER OF CHEST" sub="Lower half of breastbone" src="/cpr/hands-position.png" alt="Hands placed on the lower half of the breastbone"/>
+          <PhotoCard label={t('cpr.tut.center')} sub={t('cpr.tut.center.sub')} src="/cpr/hands-position.png" alt={t('cpr.tut.center.alt')}/>
           <p style={{ margin: 0, fontSize: 13, color: X.INK2, lineHeight: 1.45, padding: '0 2px' }}>
-            Put the sensor on the place you&apos;ll press, if you have one.
+            {t('cpr.tut.sensorHint')}
           </p>
-          <PhotoCard label="② STACK YOUR HANDS" sub="Heel of one, palm of the other" src="/cpr/hands-posing.png" alt="Stacking the heel of one hand on top of the other"/>
+          <PhotoCard label={t('cpr.tut.stack')}  sub={t('cpr.tut.stack.sub')}  src="/cpr/hands-posing.png"   alt={t('cpr.tut.stack.alt')}/>
         </div>
 
         <div style={{ marginTop: 14, padding: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16 }}>
           {[
-            ['Lock your elbows.', 'Arms straight, shoulders over hands.'],
-            ['Push 2 inches deep.', 'Use your whole body weight.'],
-            ['Push at 110 / minute.', 'About twice per second.'],
-            ['Let chest fully recoil.', 'Don’t lean between pushes.'],
-          ].map(([t, s], i) => (
+            [t('cpr.tut.tip1.t'), t('cpr.tut.tip1.s')],
+            [t('cpr.tut.tip2.t'), t('cpr.tut.tip2.s')],
+            [t('cpr.tut.tip3.t'), t('cpr.tut.tip3.s')],
+            [t('cpr.tut.tip4.t'), t('cpr.tut.tip4.s')],
+          ].map(([title, sub], i) => (
             <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: i < 3 ? `1px solid ${X.LINE2}` : 'none' }}>
               <div style={{ width: 22, height: 22, borderRadius: 11, background: X.RED, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, flexShrink: 0, marginTop: 1 }}>{i+1}</div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{t}</div>
-                <div style={{ fontSize: 11, color: X.INK2 }}>{s}</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{title}</div>
+                <div style={{ fontSize: 11, color: X.INK2 }}>{sub}</div>
               </div>
             </div>
           ))}
@@ -93,8 +95,8 @@ export default function CPRTutorialPage() {
           onOpenProfile={openManually}
         />
         <div style={{ display: 'flex', gap: 10 }}>
-          <button type="button" onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', padding: '14px 18px', border: `1px solid ${X.LINE}`, color: X.INK, borderRadius: 14, fontWeight: 700, fontSize: 13 }}>Skip</button>
-          <button type="button" onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 16, background: X.RED, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 800, letterSpacing: 0.4, boxShadow: '0 8px 24px rgba(225,29,46,0.3)' }}>I&apos;M READY · START CPR</button>
+          <button type="button" onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', padding: '14px 18px', border: `1px solid ${X.LINE}`, color: X.INK, borderRadius: 14, fontWeight: 700, fontSize: 13 }}>{t('cpr.tut.skip')}</button>
+          <button type="button" onClick={() => router.push('/sos/cpr/assist')} style={{ all: 'unset', cursor: 'pointer', flex: 1, padding: 16, background: X.RED, color: '#fff', borderRadius: 14, textAlign: 'center', fontSize: 15, fontWeight: 800, letterSpacing: 0.4, boxShadow: '0 8px 24px rgba(225,29,46,0.3)' }}>{t('cpr.tut.ready')}</button>
         </div>
       </div>
       <PatientProfileSheet
@@ -102,7 +104,7 @@ export default function CPRTutorialPage() {
         open={profileSheetOpen}
         onDismiss={dismissProfile}
         syncedAt={effective.isFallback ? null : cpr.profileSyncedAt}
-        syncError={effective.isFallback ? 'Demo profile · Arduino sketch needs reflash for live data' : cpr.profileSyncError}
+        syncError={effective.isFallback ? t('cpr.tut.demoProfileErr') : cpr.profileSyncError}
       />
     </Screen>
   );

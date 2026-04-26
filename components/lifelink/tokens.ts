@@ -19,8 +19,12 @@ export const X = {
   DARK: '#0B1018',
 } as const;
 
+// Font stacks: Latin chars resolve through the first family (Space Grotesk /
+// Inter / JetBrains Mono); CJK chars fall through to Noto Sans SC (loaded via
+// Google Fonts in globals.css), then to system Chinese fonts (PingFang SC on
+// Apple, Microsoft YaHei on Windows, Hiragino Sans GB on older macOS).
 export const FONT = {
-  display: 'Space Grotesk, -apple-system, system-ui, sans-serif',
-  mono: 'JetBrains Mono, ui-monospace, monospace',
-  body: 'Inter, -apple-system, "SF Pro Text", system-ui, sans-serif',
+  display: '"Space Grotesk", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, system-ui, sans-serif',
+  mono:    '"JetBrains Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace',
+  body:    'Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, "SF Pro Text", system-ui, sans-serif',
 } as const;

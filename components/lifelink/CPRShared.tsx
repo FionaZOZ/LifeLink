@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { X, FONT } from './tokens';
 import { Icon } from './Icon';
 import { useHelperFlow } from './helperFlow';
+import { useT } from './i18n';
 
 /** CPR toolbar — BEAT toggle (metronome ticks driven on assist page) + helper JOIN CALL. */
 export function CPRToolbar({
@@ -19,6 +20,7 @@ export function CPRToolbar({
   defaultInCall?: boolean;
   onCallActiveChange?: (active: boolean) => void;
 }) {
+  const { t } = useT();
   const [inCall, setInCall] = React.useState(defaultInCall);
   const [muted, setMuted] = React.useState(false);
 
@@ -78,7 +80,7 @@ export function CPRToolbar({
             color: beatOn ? '#fff' : 'rgba(255,255,255,0.55)',
           }}
         >
-          BEAT {beatOn ? 'ON' : 'OFF'}
+          {beatOn ? t('cpr.shared.beatOn') : t('cpr.shared.beatOff')}
         </span>
       </button>
 
@@ -98,7 +100,7 @@ export function CPRToolbar({
       >
         <Icon name={inCall ? 'mic' : 'phone'} size={14} color="#fff" stroke={2.2}/>
         <span style={{ fontSize: 9.5, fontFamily: FONT.mono, letterSpacing: 1, fontWeight: 800, color: '#fff' }}>
-          {inCall ? 'ON CALL' : 'JOIN CALL'}
+          {inCall ? t('cpr.shared.onCall') : t('cpr.shared.joinCall')}
         </span>
         {!inCall ? (
           <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: '#fff', color: X.GREEN, fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{helpersInCall}</span>
@@ -107,10 +109,10 @@ export function CPRToolbar({
             onClick={onToggleMute}
             role="button"
             aria-pressed={muted}
-            aria-label={muted ? 'Unmute' : 'Mute'}
+            aria-label={muted ? t('cpr.shared.aria.unmute') : t('cpr.shared.aria.mute')}
             style={{ minWidth: 16, height: 16, padding: '0 5px', borderRadius: 8, background: muted ? '#fff' : 'rgba(0,0,0,0.25)', color: muted ? X.RED : '#fff', fontSize: 8, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           >
-            {muted ? 'MUTED' : 'MUTE'}
+            {muted ? t('cpr.shared.muted') : t('cpr.shared.mute')}
           </span>
         )}
       </button>
@@ -123,6 +125,7 @@ export function CPRToolbar({
 // Marcus, Sarah and EMS — Jordan stays in the dispatch card's "3 alerted" count.
 
 export function CPRMiniLive({ dark = true }: { dark?: boolean }) {
+  const { t } = useT();
   const flow = useHelperFlow();
   const labelMono: React.CSSProperties = { fontSize: 9, fontFamily: FONT.mono, letterSpacing: 1.2, color: dark ? 'rgba(255,255,255,0.5)' : X.INK2 };
   const mutedColor = dark ? 'rgba(255,255,255,0.45)' : X.INK3;
@@ -130,7 +133,7 @@ export function CPRMiniLive({ dark = true }: { dark?: boolean }) {
   const visible = flow.rows.filter(r => r.helper.id !== 'jordan');
   const onScene = flow.onSceneCount > 0;
   const acceptedCount = flow.acceptedCount; // includes EMS once dispatched
-  const headerStatus = onScene ? 'HELPER ON SCENE' : acceptedCount === 0 ? 'ALERTING NEARBY HELPERS' : 'HELP IS COMING';
+  const headerStatus = onScene ? t('cpr.shared.mini.onScene') : acceptedCount === 0 ? t('cpr.shared.mini.alerting') : t('cpr.shared.mini.coming');
   const headerColor = onScene ? X.GREEN : acceptedCount === 0 ? X.AMBER : X.GREEN;
 
   // Match the SVG dots to Marcus / Sarah / EMS (in that grid layout)
@@ -150,7 +153,7 @@ export function CPRMiniLive({ dark = true }: { dark?: boolean }) {
         <span className="ll-blink" style={{ width: 6, height: 6, borderRadius: 3, background: headerColor }}/>
         <span style={{ ...labelMono, color: headerColor, fontWeight: 700 }}>{headerStatus}</span>
         <span style={{ flex: 1 }}/>
-        <span style={labelMono}>TAP TO EXPAND ↗</span>
+        <span style={labelMono}>{t('cpr.shared.mini.tapExpand')}</span>
       </div>
       <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: '88px 1fr', gap: 12, alignItems: 'stretch' }}>
         <div style={{ position: 'relative', height: 80, borderRadius: 10, overflow: 'hidden', background: '#E8EAE6' }}>

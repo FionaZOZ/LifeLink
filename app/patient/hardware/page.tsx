@@ -5,12 +5,10 @@ import { Icon } from '@/components/lifelink/Icon';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { AppleWatchCard } from '@/components/lifelink/AppleWatchCard';
 import { useAppleWatch } from '@/lib/useAppleWatch';
-
-// "Last usage" of the patch is hardcoded for the demo. In a real build this
-// would come from the same place the SOS flow records compressions.
-const PATCH_LAST_USAGE = '12 Apr · CPR drill · 2 min';
+import { useT } from '@/components/lifelink/i18n';
 
 export default function PatientHardwarePage() {
+  const { t } = useT();
   // Pull the watch state for the metadata strip's "Apple Watch battery" row.
   // Both this hook call and the AppleWatchCard above share state via the
   // module-level singleton in lib/useAppleWatch.ts, so the battery here
@@ -18,7 +16,7 @@ export default function PatientHardwarePage() {
   const aw = useAppleWatch();
   const watchBattery = aw.battery != null
     ? `${aw.battery}%`
-    : 'Not connected';
+    : t('pat.hw.row.watchBatt.notConnected');
   const watchBatteryColor = aw.battery == null
     ? X.INK3
     : aw.battery >= 30 ? X.GREEN
@@ -27,27 +25,26 @@ export default function PatientHardwarePage() {
 
   return (
     <Screen>
-      <TopBar title="LifeLink Hardware" leading="back" backHref="/profile"/>
+      <TopBar title={t('pat.hw.title')} leading="back" backHref="/profile"/>
       <div style={{ padding: '8px 22px 24px', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
 
         {/* ── Heart beat (Apple Watch) ───────────────────────────────── */}
-        <SectionLabel>HEART BEAT</SectionLabel>
+        <SectionLabel>{t('pat.hw.heartBeat')}</SectionLabel>
         <div style={{ marginTop: 8 }}>
           <AppleWatchCard variant="hardware"/>
         </div>
 
         {/* ── YOUR Patch — CPR device, separate from the watch ──── */}
         <div style={{ marginTop: 22 }}>
-          <SectionLabel>YOUR PATCH</SectionLabel>
+          <SectionLabel>{t('pat.hw.patchHeader')}</SectionLabel>
           <div style={{ marginTop: 8, fontSize: 12, color: X.INK2, lineHeight: 1.4 }}>
-            Adhesive CPR assist patch. Stays on the chest so a helper can apply
-            chest compressions in the right spot during an emergency.
+            {t('pat.hw.patchBody')}
           </div>
         </div>
 
         {/* Where to stick it — kept as-is, this is patch placement guidance */}
         <div style={{ marginTop: 14 }}>
-          <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>WHERE TO STICK IT</div>
+          <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>{t('pat.hw.where')}</div>
           <div style={{ marginTop: 8, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, padding: 12, display: 'flex', gap: 14, alignItems: 'center' }}>
             <div style={{ width: 110, height: 130, background: X.BG, borderRadius: 12, position: 'relative', overflow: 'hidden' }}>
               <svg viewBox="0 0 110 130" width="100%" height="100%">
@@ -59,10 +56,10 @@ export default function PatientHardwarePage() {
               </svg>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Lower-left chest</div>
-              <div style={{ fontSize: 11, color: X.INK2, marginTop: 2 }}>Below the breast, slightly toward the side. Skin must be clean &amp; dry.</div>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>{t('pat.hw.where.location')}</div>
+              <div style={{ fontSize: 11, color: X.INK2, marginTop: 2 }}>{t('pat.hw.where.body')}</div>
               <div style={{ marginTop: 8, fontSize: 11, color: X.BLUE, fontWeight: 700, display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                <Icon name="message" size={14} color={X.BLUE} stroke={2}/> Watch 30s video
+                <Icon name="message" size={14} color={X.BLUE} stroke={2}/> {t('pat.hw.where.video')}
               </div>
             </div>
           </div>
@@ -75,10 +72,10 @@ export default function PatientHardwarePage() {
             That's the spec the patient flow asked for. */}
         <div style={{ marginTop: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, overflow: 'hidden' }}>
           {([
-            { label: 'Last usage',          value: PATCH_LAST_USAGE,    color: X.GREEN },
-            { label: 'Apple Watch battery', value: watchBattery,        color: watchBatteryColor },
-            { label: 'Adhesive',            value: 'Replace in 4 days', color: X.AMBER },
-            { label: 'Firmware',            value: 'Up to date',        color: X.GREEN },
+            { label: t('pat.hw.row.lastUsage'),  value: t('pat.hw.row.lastUsage.val'), color: X.GREEN },
+            { label: t('pat.hw.row.watchBatt'),  value: watchBattery,                  color: watchBatteryColor },
+            { label: t('pat.hw.row.adhesive'),   value: t('pat.hw.row.adhesive.val'),  color: X.AMBER },
+            { label: t('pat.hw.row.firmware'),   value: t('pat.hw.row.firmware.val'),  color: X.GREEN },
           ] as const).map((row, i, a) => (
             <div key={row.label} style={{
               padding: 14, display: 'flex', alignItems: 'center', gap: 10,

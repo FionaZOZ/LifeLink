@@ -9,6 +9,7 @@ import { useDemoRole, isVolunteer, isPatient } from '@/components/lifelink/demoR
 import { useHoldToFire } from '@/components/lifelink/useHoldToFire';
 import { clearSosTimer } from '@/components/lifelink/sosTimer';
 import { AppleWatchCard } from '@/components/lifelink/AppleWatchCard';
+import { useT } from '@/components/lifelink/i18n';
 
 const HOLD_MS = 1500;
 // Inner button is 240px, outer ring sits at 280px → scale factor to fill is 280/240 ≈ 1.167
@@ -25,19 +26,20 @@ export default function HomePage() {
 
 function HomeGuest() {
   const router = useRouter();
+  const { t } = useT();
   const { isHolding, handlers } = useHoldToFire(HOLD_MS, () => router.push('/sos'));
   return (
     <Screen>
       <div style={{ padding: '6px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4, fontWeight: 700 }}>LIFELINK</div>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK3, letterSpacing: 0.6 }}>guest</div>
+        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4, fontWeight: 700 }}>{t('home.guest.brand')}</div>
+        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK3, letterSpacing: 0.6 }}>{t('home.guest.role')}</div>
       </div>
 
       <div style={{ position: 'absolute', left: 0, right: 0, top: 90, bottom: 240, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <div
           {...handlers}
           role="button"
-          aria-label="Start emergency — press and hold for 1.5 seconds"
+          aria-label={t('home.aria.startEmergency')}
           style={{ touchAction: 'none', userSelect: 'none', cursor: 'pointer', position: 'relative', width: 280, height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           {/* ambient pulse rings — keep running even while holding */}
@@ -59,18 +61,18 @@ function HomeGuest() {
             willChange: 'transform',
           }}>
             <Icon name="siren" size={42} color="#fff" stroke={2.2}/>
-            <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 1.2, fontFamily: FONT.display, marginTop: 10 }}>START</div>
-            <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 1.2, fontFamily: FONT.display }}>EMERGENCY</div>
+            <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 1.2, fontFamily: FONT.display, marginTop: 10 }}>{t('home.guest.start')}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 1.2, fontFamily: FONT.display }}>{t('home.guest.emergency')}</div>
             <div style={{ fontSize: 11, fontFamily: FONT.mono, opacity: 0.95, marginTop: 10, letterSpacing: 1.4 }}>
-              {isHolding ? 'KEEP HOLDING' : 'HOLD · 1.5s'}
+              {isHolding ? t('home.guest.keepHold') : t('home.guest.holdHint')}
             </div>
           </div>
         </div>
         <div style={{ marginTop: 22, fontSize: 14, color: X.INK, fontWeight: 600, textAlign: 'center', maxWidth: 280, lineHeight: 1.4 }}>
-          If someone needs help, hold to begin.
+          {t('home.guest.subtitle')}
         </div>
         <div style={{ marginTop: 6, fontSize: 12, color: X.INK2, textAlign: 'center' }}>
-          No account needed.
+          {t('home.guest.noAccount')}
         </div>
       </div>
 
@@ -79,8 +81,8 @@ function HomeGuest() {
           <Icon name="heart" size={16} color={X.GREEN} stroke={2}/>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: X.INK }}>Become a volunteer</div>
-          <div style={{ fontSize: 11, color: X.INK2 }}>Get alerted when someone nearby needs help</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: X.INK }}>{t('home.guest.becomeVolunteer')}</div>
+          <div style={{ fontSize: 11, color: X.INK2 }}>{t('home.guest.becomeVolunteerSub')}</div>
         </div>
         <Icon name="chevron-right" size={16} color={X.INK3} stroke={2}/>
       </Link>
@@ -92,33 +94,34 @@ function HomeGuest() {
 
 function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
   const router = useRouter();
+  const { t } = useT();
   const { isHolding, progress, handlers } = useHoldToFire(HOLD_MS, () => router.push('/sos'));
   return (
     <Screen>
       <div style={{ padding: '6px 22px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.2 }}>FRIDAY · 25 APR</div>
-            <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4, letterSpacing: -0.5, fontFamily: FONT.display }}>Hi, Marcus.</div>
+            <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.2 }}>{t('home.pat.dateLabel')}</div>
+            <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4, letterSpacing: -0.5, fontFamily: FONT.display }}>{t('home.vol.greeting')}</div>
           </div>
           <div style={{ width: 42, height: 42, borderRadius: 21, background: X.GREEN, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>MK</div>
         </div>
         <div style={{ fontSize: 13, color: X.INK2, marginTop: 4 }}>
-          {patientToo ? 'Volunteer + Patient · Tier 2 CPR · 240 m radius' : 'Volunteer · Tier 2 CPR · 240 m radius'}
+          {patientToo ? t('home.vol.role.both') : t('home.vol.role')}
         </div>
       </div>
 
       <div
         {...handlers}
         role="button"
-        aria-label="Start emergency — press and hold for 1.5 seconds"
+        aria-label={t('home.aria.startEmergency')}
         style={{ touchAction: 'none', userSelect: 'none', cursor: 'pointer', display: 'block', margin: '18px 22px 0', padding: 18, borderRadius: 20, background: X.INK, color: '#fff', position: 'relative', overflow: 'hidden', transform: isHolding ? 'scale(0.99)' : 'scale(1)', transition: 'transform 120ms ease-out' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.65 }}>EMERGENCY CALL</div>
-            <div style={{ fontSize: 24, fontWeight: 700, marginTop: 6, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.1 }}>
-              Hold if someone<br/>needs help
+            <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, opacity: 0.65 }}>{t('home.vol.emergencyCall')}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, marginTop: 6, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.1, whiteSpace: 'pre-line' }}>
+              {t('home.vol.holdIfHelp')}
             </div>
           </div>
           <div className="ll-pulse-dot" style={{ width: 56, height: 56, borderRadius: 28, background: X.RED, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 6px rgba(225,29,46,0.18)', animationPlayState: isHolding ? 'paused' : 'running' }}>
@@ -126,7 +129,7 @@ function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
           </div>
         </div>
         <div style={{ marginTop: 14, padding: '10px 0 0', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 14, fontSize: 11, fontFamily: FONT.mono, opacity: 0.75 }}>
-          <span>{isHolding ? 'KEEP HOLDING…' : 'HOLD 1.5s'}</span> · <span>VOICE: &quot;HEY SIRI, CARDIAC EMERGENCY&quot;</span>
+          <span>{isHolding ? t('home.vol.keepHolding') : t('home.vol.hold15')}</span> · <span>{t('home.vol.voice')}</span>
         </div>
         {/* progress bar */}
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,0.06)' }}>
@@ -136,9 +139,9 @@ function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
 
       <div style={{ margin: '14px 22px 0', background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 18, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
         {[
-          { k: '12', l: 'responses' },
-          { k: '4', l: 'lives saved' },
-          { k: '2.4', l: 'min avg ETA' },
+          { k: '12',  l: t('home.vol.stat.responses') },
+          { k: '4',   l: t('home.vol.stat.savedLives') },
+          { k: '2.4', l: t('home.vol.stat.avgEta') },
         ].map((s, i) => (
           <div key={i} style={{ padding: '16px 14px', borderRight: i < 2 ? `1px solid ${X.LINE}` : 'none' }}>
             <div style={{ fontSize: 28, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -1 }}>{s.k}</div>
@@ -154,9 +157,9 @@ function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
           <div className="ll-pulse-dot" style={{ position: 'relative', width: 10, height: 10, borderRadius: 5, background: X.GREEN }}/>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.GREEN, fontWeight: 700 }}>ON CALL</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: X.INK, marginTop: 2 }}>Listening within 240 m</div>
-          <div style={{ fontSize: 12, color: X.INK2, marginTop: 1 }}>Code Red alerts will reach you instantly</div>
+          <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.GREEN, fontWeight: 700 }}>{t('home.vol.onCall')}</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: X.INK, marginTop: 2 }}>{t('home.vol.listening')}</div>
+          <div style={{ fontSize: 12, color: X.INK2, marginTop: 1 }}>{t('home.vol.listeningSub')}</div>
         </div>
       </div>
 
@@ -166,8 +169,8 @@ function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
             <Icon name="activity" size={20} color={X.RED} stroke={2}/>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: X.INK }}>Your patch — 72 BPM</div>
-            <div style={{ fontSize: 12, color: X.INK2 }}>Connected · battery 88%</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: X.INK }}>{t('home.vol.patchTitle', { bpm: 72 })}</div>
+            <div style={{ fontSize: 12, color: X.INK2 }}>{t('home.vol.patchSub', { pct: 88 })}</div>
           </div>
           <Icon name="chevron-right" size={18} color={X.INK3} stroke={2}/>
         </Link>
@@ -180,17 +183,18 @@ function HomeVolunteer({ patientToo = false }: { patientToo?: boolean }) {
 
 function HomePatient() {
   const router = useRouter();
+  const { t } = useT();
   return (
     <Screen>
       <div style={{ padding: '6px 22px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.2 }}>FRIDAY · 25 APR</div>
-            <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4, letterSpacing: -0.5, fontFamily: FONT.display }}>Hi, Eleanor.</div>
+            <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.2 }}>{t('home.pat.dateLabel')}</div>
+            <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4, letterSpacing: -0.5, fontFamily: FONT.display }}>{t('home.pat.greeting')}</div>
           </div>
           <div style={{ width: 42, height: 42, borderRadius: 21, background: X.RED, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>ET</div>
         </div>
-        <div style={{ fontSize: 13, color: X.INK2, marginTop: 4 }}>Patient · pacemaker · cardiologist Dr. Patel</div>
+        <div style={{ fontSize: 13, color: X.INK2, marginTop: 4 }}>{t('home.pat.role')}</div>
       </div>
 
       <div style={{ margin: '18px 22px 0' }}>
@@ -202,15 +206,15 @@ function HomePatient() {
           <Icon name="phone" size={20} color={X.RED} stroke={2}/>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: X.INK }}>Emergency contacts</div>
-          <div style={{ fontSize: 12, color: X.INK2 }}>3 people in call order</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: X.INK }}>{t('home.pat.contactsTitle.short')}</div>
+          <div style={{ fontSize: 12, color: X.INK2 }}>{t('home.pat.contactsSub.short')}</div>
         </div>
         <Icon name="chevron-right" size={18} color={X.INK3} stroke={2}/>
       </Link>
 
       <Link href="/sos" style={{ textDecoration: 'none', display: 'block', margin: '14px 22px 0', padding: 16, borderRadius: 16, background: X.RED_BG, border: `1px solid ${X.RED}33` }}>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.RED, fontWeight: 700 }}>SOMEONE ELSE NEEDS HELP?</div>
-        <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, color: X.INK }}>Start an emergency for them →</div>
+        <div style={{ fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.RED, fontWeight: 700 }}>{t('home.pat.someoneNeeds')}</div>
+        <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, color: X.INK }}>{t('home.pat.startForThem')}</div>
       </Link>
 
       <TabBar active="home"/>

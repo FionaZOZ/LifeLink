@@ -2,17 +2,18 @@
 import * as React from 'react';
 import { Icon } from './Icon';
 import { X, FONT } from './tokens';
+import { useT } from './i18n';
 import {
   useCallState, minimizeCall, expandCall, endCall, setCallPos, setCallTucked,
   fmtCallElapsed, derivePhase, type CallPhase, type TuckedSide,
 } from './callState';
 
-type Participant = { letter: string; name: string; role: string; color: string };
+type Participant = { letter: string; nameKey: string; roleKey: string; color: string };
 
-const ELEANOR: Participant = { letter: 'E', name: 'Eleanor T.', role: '67 · pacemaker',  color: X.RED };
-const YOU:     Participant = { letter: 'M', name: 'You',         role: 'Marcus',          color: X.INK };
-const ALEX:    Participant = { letter: 'A', name: 'Alex',        role: 'direct route',    color: X.GREEN };
-const SARAH:   Participant = { letter: 'S', name: 'Sarah',       role: 'with AED',        color: X.AMBER };
+const ELEANOR: Participant = { letter: 'E', nameKey: 'call.eleanor',  roleKey: 'call.eleanor.sub', color: X.RED };
+const YOU:     Participant = { letter: 'M', nameKey: 'call.you',      roleKey: 'call.role.you',    color: X.INK };
+const ALEX:    Participant = { letter: 'A', nameKey: 'call.alex',     roleKey: 'call.role.alex',   color: X.GREEN };
+const SARAH:   Participant = { letter: 'S', nameKey: 'call.sarah',    roleKey: 'call.role.sarah',  color: X.AMBER };
 
 const STAGE_MAX = 440;
 const WIDGET_SIZE = 64; // square widget
@@ -35,11 +36,12 @@ function FullscreenCall({ shrinking }: { shrinking: boolean }) {
   const { startedAt, pos } = useCallState();
   const elapsed = useElapsed(startedAt);
   const phase = derivePhase(elapsed);
+  const { t } = useT();
 
   const statusLabel =
-    phase === 'ringing' ? 'CALLING…'
-    : phase === 'solo'  ? `CONNECTED · ${fmtCallElapsed(elapsed)}`
-    :                     `GROUP CALL · ${fmtCallElapsed(elapsed)}`;
+    phase === 'ringing' ? t('call.calling')
+    : phase === 'solo'  ? t('call.connected', { time: fmtCallElapsed(elapsed) })
+    :                     t('call.group',     { time: fmtCallElapsed(elapsed) });
 
   // Aim the shrink at the widget's stored center so the page collapses
   // *into* where the floating box will appear.
@@ -62,7 +64,7 @@ function FullscreenCall({ shrinking }: { shrinking: boolean }) {
       <div style={{ position: 'absolute', top: 18, left: 16, right: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
         <button
           onClick={minimizeCall}
-          aria-label="Minimize call to floating window"
+          aria-label={t('call.aria.minimize')}
           style={{
             all: 'unset', cursor: 'pointer',
             width: 36, height: 36, borderRadius: 12,
@@ -90,7 +92,7 @@ function FullscreenCall({ shrinking }: { shrinking: boolean }) {
           position: 'absolute', bottom: 156, left: 0, right: 0,
           textAlign: 'center', fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1, opacity: 0.55,
         }}>
-          Group is open · Alex and Sarah can join
+          {t('call.openHint')}
         </div>
       )}
 
@@ -99,13 +101,13 @@ function FullscreenCall({ shrinking }: { shrinking: boolean }) {
         position: 'absolute', bottom: 38, left: 0, right: 0,
         display: 'flex', gap: 22, justifyContent: 'center', alignItems: 'center',
       }}>
-        <CtrlButton aria-label="Mute">
+        <CtrlButton aria-label={t('call.aria.mute')}>
           <Icon name="mic" size={22} color="#fff" stroke={2}/>
         </CtrlButton>
-        <CtrlButton onClick={endCall} aria-label="End call" red>
+        <CtrlButton onClick={endCall} aria-label={t('call.aria.end')} red>
           <Icon name="phone" size={24} color="#fff" stroke={2.4} style={{ transform: 'rotate(135deg)' }}/>
         </CtrlButton>
-        <CtrlButton aria-label="Speaker">
+        <CtrlButton aria-label={t('call.aria.speaker')}>
           <Icon name="volume" size={22} color="#fff" stroke={2}/>
         </CtrlButton>
       </div>
@@ -135,6 +137,7 @@ function CtrlButton({
 }
 
 function PrimaryHero({ phase }: { phase: CallPhase }) {
+  const { t } = useT();
   const ringing = phase === 'ringing';
   const size = ringing ? 132 : 100;
   const top = ringing ? 130 : 110;
@@ -156,13 +159,14 @@ function PrimaryHero({ phase }: { phase: CallPhase }) {
           boxShadow: '0 10px 30px rgba(0,0,0,0.5), 0 0 0 3px rgba(255,255,255,0.1)',
         }}>{ELEANOR.letter}</div>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.3, marginTop: 14 }}>{ELEANOR.name}</div>
-      <div style={{ fontSize: 12, opacity: 0.65, fontFamily: FONT.mono, letterSpacing: 0.6, marginTop: 2 }}>{ELEANOR.role}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.3, marginTop: 14 }}>{t(ELEANOR.nameKey)}</div>
+      <div style={{ fontSize: 12, opacity: 0.65, fontFamily: FONT.mono, letterSpacing: 0.6, marginTop: 2 }}>{t(ELEANOR.roleKey)}</div>
     </div>
   );
 }
 
 function SecondaryRow({ phase }: { phase: CallPhase }) {
+  const { t } = useT();
   if (phase === 'ringing') return null;
   const others: { p: Participant; joined: boolean }[] = [
     { p: YOU,   joined: true }, // Marcus joined as soon as solo phase starts
@@ -192,8 +196,8 @@ function SecondaryRow({ phase }: { phase: CallPhase }) {
               border: '2px solid #0E0F12',
             }}/>
           </div>
-          <div style={{ fontSize: 11, fontWeight: 700 }}>{p.name === 'You' ? 'You' : p.name}</div>
-          <div style={{ fontSize: 9, opacity: 0.6, fontFamily: FONT.mono }}>{joined ? 'in call' : 'joining…'}</div>
+          <div style={{ fontSize: 11, fontWeight: 700 }}>{t(p.nameKey)}</div>
+          <div style={{ fontSize: 9, opacity: 0.6, fontFamily: FONT.mono }}>{joined ? t('call.inCall') : t('call.joining')}</div>
         </div>
       ))}
     </div>

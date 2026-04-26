@@ -7,18 +7,20 @@ import { X, FONT } from '@/components/lifelink/tokens';
 import { isSosFlowActive } from '@/components/lifelink/sosTimer';
 import { SOS_BREATHE_LINES } from '@/lib/voice/sosNarrationScripts';
 import { useElevenLabsScriptedNarration } from '@/lib/voice/useElevenLabsScriptedNarration';
+import { useT } from '@/components/lifelink/i18n';
 
 export default function BreathingPage() {
   const router = useRouter();
+  const { t } = useT();
   useElevenLabsScriptedNarration('sos-breathe', SOS_BREATHE_LINES, isSosFlowActive());
   return (
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>
 
       <div style={{ padding: '70px 22px 0' }}>
-        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>STEP 2 · CHECK · DISPATCH SENT</div>
-        <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05 }}>
-          Are they<br/>breathing?
+        <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.INK2, letterSpacing: 1.4 }}>{t('sos.breath.step')}</div>
+        <div style={{ marginTop: 4, fontSize: 26, fontWeight: 700, fontFamily: FONT.display, letterSpacing: -0.5, lineHeight: 1.05, whiteSpace: 'pre-line' }}>
+          {t('sos.breath.title')}
         </div>
 
         <div style={{ marginTop: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 16, padding: 14 }}>
@@ -37,11 +39,11 @@ export default function BreathingPage() {
               <text x="160" y="20" fontFamily="JetBrains Mono, monospace" fontSize="9" fontWeight="700" fill={X.RED}>10s</text>
             </svg>
           </div>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>Tilt their head back. Watch the chest.</div>
-          <div style={{ fontSize: 12, color: X.INK2, marginTop: 4 }}>Look, listen, and feel for normal breathing — for no more than 10 seconds. Gasping is <strong style={{ color: X.RED }}>not</strong> normal breathing.</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{t('sos.breath.tilt')}</div>
+          <div style={{ fontSize: 12, color: X.INK2, marginTop: 4 }}>{t('sos.breath.lookListen')} <strong style={{ color: X.RED }}>{t('sos.breath.notWord')}</strong> {t('sos.breath.notNormal')}</div>
         </div>
 
-        <div style={{ marginTop: 14, fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>WHAT DO YOU SEE?</div>
+        <div style={{ marginTop: 14, fontSize: 11, fontFamily: FONT.mono, letterSpacing: 1.4, color: X.INK2 }}>{t('sos.whatYouSee')}</div>
       </div>
 
       <div style={{ position: 'absolute', left: 22, right: 22, bottom: 38, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -51,8 +53,8 @@ export default function BreathingPage() {
               <Icon name="check" size={18} color={X.GREEN} stroke={2.4}/>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 800 }}>Breathing normally</div>
-              <div style={{ fontSize: 11, color: X.INK2 }}>Recovery position · stay with them</div>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>{t('sos.breath.yes')}</div>
+              <div style={{ fontSize: 11, color: X.INK2 }}>{t('sos.breath.yesSub')}</div>
             </div>
             <Icon name="chevron-right" size={18} color={X.INK3} stroke={2.4}/>
           </div>
@@ -63,8 +65,8 @@ export default function BreathingPage() {
               <Icon name="x" size={20} color="#fff" stroke={2.6}/>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.2 }}>NOT BREATHING / GASPING</div>
-              <div style={{ fontSize: 11, opacity: 0.9 }}>Start CPR now</div>
+              <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.2 }}>{t('sos.breath.no')}</div>
+              <div style={{ fontSize: 11, opacity: 0.9 }}>{t('sos.breath.noSub')}</div>
             </div>
             <Icon name="chevron-right" size={18} color="#fff" stroke={2.4}/>
           </div>
