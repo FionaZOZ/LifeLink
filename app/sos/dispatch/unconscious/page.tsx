@@ -7,6 +7,7 @@ import { SlideToConfirm } from '@/components/lifelink/SlideToConfirm';
 import { X, FONT } from '@/components/lifelink/tokens';
 import { markDispatchConfirmed, useDispatchElapsed } from '@/components/lifelink/sosTimer';
 import { useHelperFlow } from '@/components/lifelink/helperFlow';
+import { RapidSOSCard } from '@/components/lifelink/RapidSOSCard';
 import { useT } from '@/components/lifelink/i18n';
 
 export default function DispatchUnconsciousPage() {
@@ -15,7 +16,6 @@ export default function DispatchUnconsciousPage() {
   const { seconds: dispatchSec, confirmed: dispatched } = useDispatchElapsed();
   const flow = useHelperFlow();
 
-  const ringText = `${Math.floor(dispatchSec / 60)}:${String(dispatchSec % 60).padStart(2, '0')}`;
   const alertedCount = flow.alertedCount; // 0 → 3 as time passes
   const acceptedRows = flow.rows.filter(r => (r.state === 'accepted' || r.state === 'arriving' || r.state === 'on_scene') && r.helper.id !== 'ems');
   const closestEnRoute = acceptedRows[0];
@@ -47,7 +47,12 @@ export default function DispatchUnconsciousPage() {
     <Screen bg={X.PAPER} padTop={0}>
       <EmergencyBanner/>
 
-      <div style={{ padding: '70px 22px 0' }}>
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 100,
+        overflowY: 'auto',
+        padding: '70px 22px 24px',
+        boxSizing: 'border-box',
+      }}>
         <div style={{ fontSize: 11, fontFamily: FONT.mono, color: X.RED, letterSpacing: 1.4, fontWeight: 700 }}>
           {dispatched ? t('sos.disp.un.statusSent') : t('sos.disp.un.statusConfirm')}
         </div>
@@ -55,7 +60,7 @@ export default function DispatchUnconsciousPage() {
           {dispatched ? t('sos.disp.un.titleSent') : t('sos.disp.un.titleConfirm')}
         </div>
 
-        {/* 911 card — pre-dispatch slider, post-dispatch ringing card */}
+        {/* 911 card — pre-dispatch slider, post-dispatch upload-status card */}
         {!dispatched ? (
           <div style={{ marginTop: 16, padding: 14, background: '#fff', border: `1px solid ${X.LINE}`, borderRadius: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -70,25 +75,36 @@ export default function DispatchUnconsciousPage() {
             <SlideToConfirm
               label={t('sos.disp.un.slideLabel')}
               confirmedLabel={t('sos.disp.un.slideConfirmed')}
-              iconName="phone"
+              iconName="arrow-right"
               fillBg={X.GREEN}
               thumbBg={X.GREEN}
               onConfirm={() => markDispatchConfirmed()}
             />
           </div>
         ) : (
-          <div style={{ marginTop: 16, padding: 14, background: X.GREEN_BG, border: `1px solid ${X.GREEN}33`, borderRadius: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ position: 'relative', width: 44, height: 44 }}>
-              <div style={{ position: 'absolute', inset: -4, borderRadius: '50%', border: `1.5px solid ${X.GREEN}55`, animation: 'll-pulse-ring 1.8s ease-out infinite' }}/>
-              <div style={{ width: 44, height: 44, borderRadius: 22, background: X.GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name="phone" size={20} color="#fff" stroke={2.2}/>
+          (() => {
+            // After dispatch the row reads as "uploading payload" for ~2 s, then
+            // "sent · live syncing". Pulse-ring stops once the initial push lands.
+            const isUploading = dispatchSec < 2;
+            return (
+              <div style={{ marginTop: 16, padding: 14, background: X.GREEN_BG, border: `1px solid ${X.GREEN}33`, borderRadius: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ position: 'relative', width: 44, height: 44 }}>
+                  {isUploading && (
+                    <div style={{ position: 'absolute', inset: -4, borderRadius: '50%', border: `1.5px solid ${X.GREEN}55`, animation: 'll-pulse-ring 1.8s ease-out infinite' }}/>
+                  )}
+                  <div style={{ width: 44, height: 44, borderRadius: 22, background: X.GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon name={isUploading ? 'arrow-up' : 'check'} size={20} color="#fff" stroke={2.6}/>
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: X.GREEN }}>{t('sos.disp.un.connecting')}</div>
+                  <div style={{ fontSize: 11, color: X.GREEN, opacity: 0.85, fontFamily: FONT.mono }}>
+                    {isUploading ? t('sos.send.status.sending') : t('sos.send.status.sentLive')}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: X.GREEN }}>{t('sos.disp.un.connecting')}</div>
-              <div style={{ fontSize: 11, color: X.GREEN, opacity: 0.85, fontFamily: FONT.mono }}>{t('sos.disp.un.ringing', { time: ringText })}</div>
-            </div>
-          </div>
+            );
+          })()
         )}
 
         {/* Helpers card — counts up incrementally as alerts fan out */}
@@ -129,6 +145,11 @@ export default function DispatchUnconsciousPage() {
             <div style={{ fontSize: 14, fontWeight: 700 }}>{t('sos.disp.un.address')}</div>
             <div style={{ fontSize: 11, color: X.INK2, fontFamily: FONT.mono }}>{t('sos.disp.un.gps')}</div>
           </div>
+        </div>
+
+        {/* RapidSOS data-payload disclosure — what's pushed to dispatch */}
+        <div style={{ marginTop: 10, opacity: dispatched ? 1 : 0.45, transition: 'opacity 220ms ease-out' }}>
+          <RapidSOSCard/>
         </div>
       </div>
 
