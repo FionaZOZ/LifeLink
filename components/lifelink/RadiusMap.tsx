@@ -71,11 +71,16 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
   // the radius rings, the AED tiles and every pin shrink together — gives a
   // proper zoomed-out feel without rewriting every coord.
   const ZOOM = 0.78;
+  // Source-coord bounds extended past the viewBox so blocks + streets stay
+  // unbroken right up to the visible map edges after the 0.78 down-scale.
+  const minX = -70, maxX = 460;
+  const minY = -80, maxY = h + 90;
   return (
     <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid slice" style={{ background: '#E8EAE6', display: 'block' }}>
       <rect x="0" y="0" width={w} height={h} fill="#E8EAE6"/>
       <g transform={`translate(${cx} ${cy}) scale(${ZOOM}) translate(${-cx} ${-cy})`}>
       <g fill="#DCDFD8">
+        {/* Original central blocks */}
         <rect x="10" y="20" width="80" height="120" rx="2"/>
         <rect x="100" y="20" width="100" height="80" rx="2"/>
         <rect x="210" y="20" width="100" height="120" rx="2"/>
@@ -89,18 +94,43 @@ export function RadiusMap({ mode = 'live', h = 514, helpers }: {
         <rect x="0" y="420" width="120" height="100" rx="2"/>
         <rect x="140" y="320" width="80" height="100" rx="2"/>
         <rect x="240" y="340" width="120" height="180" rx="2"/>
+        {/* Edge fillers — extend the city grid so the visible map edges
+            still show street pattern after the zoom-out scale. */}
+        {/* Top edge */}
+        <rect x="-70" y="-80" width="80" height="60" rx="2"/>
+        <rect x="20" y="-80" width="80" height="60" rx="2"/>
+        <rect x="110" y="-80" width="100" height="60" rx="2"/>
+        <rect x="220" y="-80" width="100" height="60" rx="2"/>
+        <rect x="330" y="-80" width="60" height="60" rx="2"/>
+        <rect x="400" y="-80" width="60" height="60" rx="2"/>
+        {/* Bottom edge */}
+        <rect x="-70" y={h + 20} width="100" height="70" rx="2"/>
+        <rect x="40" y={h + 20} width="100" height="70" rx="2"/>
+        <rect x="150" y={h + 20} width="120" height="70" rx="2"/>
+        <rect x="280" y={h + 20} width="80" height="70" rx="2"/>
+        <rect x="370" y={h + 20} width="90" height="70" rx="2"/>
+        {/* Left edge */}
+        <rect x="-70" y="20" width="60" height="120" rx="2"/>
+        <rect x="-70" y="160" width="60" height="100" rx="2"/>
+        <rect x="-70" y="280" width="60" height="120" rx="2"/>
+        <rect x="-70" y="420" width="60" height="100" rx="2"/>
+        {/* Right edge */}
+        <rect x="400" y="20" width="60" height="120" rx="2"/>
+        <rect x="400" y="160" width="60" height="100" rx="2"/>
+        <rect x="400" y="280" width="60" height="120" rx="2"/>
+        <rect x="400" y="420" width="60" height="100" rx="2"/>
       </g>
       <g stroke="#fff" strokeWidth="14" fill="none">
-        <line x1="0" y1={cy - 70} x2={w} y2={cy - 70}/>
-        <line x1="0" y1={cy + 50} x2={w} y2={cy + 50}/>
-        <line x1="80" y1="0" x2="80" y2={h}/>
-        <line x1="220" y1="0" x2="220" y2={h}/>
+        <line x1={minX} y1={cy - 70} x2={maxX} y2={cy - 70}/>
+        <line x1={minX} y1={cy + 50} x2={maxX} y2={cy + 50}/>
+        <line x1="80" y1={minY} x2="80" y2={maxY}/>
+        <line x1="220" y1={minY} x2="220" y2={maxY}/>
       </g>
       <g stroke="#cfd2cd" strokeWidth="1" strokeDasharray="4 6">
-        <line x1="0" y1={cy - 70} x2={w} y2={cy - 70}/>
-        <line x1="0" y1={cy + 50} x2={w} y2={cy + 50}/>
-        <line x1="80" y1="0" x2="80" y2={h}/>
-        <line x1="220" y1="0" x2="220" y2={h}/>
+        <line x1={minX} y1={cy - 70} x2={maxX} y2={cy - 70}/>
+        <line x1={minX} y1={cy + 50} x2={maxX} y2={cy + 50}/>
+        <line x1="80" y1={minY} x2="80" y2={maxY}/>
+        <line x1="220" y1={minY} x2="220" y2={maxY}/>
       </g>
 
       {(mode === 'live' || mode === 'overview' || mode === 'helper') && (
